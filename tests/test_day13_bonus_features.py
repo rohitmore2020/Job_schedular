@@ -192,3 +192,81 @@ def test_ai_failure_diagnostic_engine():
     )
     assert "Validation Failure" in schema_summary
     assert "Replay Safe]: No" in schema_summary
+
+
+@pytest.mark.asyncio
+async def test_at_least_once_execution_context_and_side_effect_idempotency(db_session, setup_dag_fixtures):
+    """
+    CRITICAL AT-LEAST-ONCE IDEMPOTENCY TEST:
+    Verifies that:
+    1. Every execution has a unique execution_id and exposes attempt_number via ExecutionContext.
+    2. External side-effects (e.g. Stripe charge) wrapped with execute_idempotent_operation
+       are executed EXACTLY ONCE across multiple at-least-once retry attempts.
+    """
+    from backend.app.models import JobExecution
+    from backend.app.models.idempotency import IdempotencyRecord
+    from worker.app.engine.context import ExecutionContext
+    from worker.app.tasks.registry import task_registry
+
+    org, proj, queue = setup_dag_fixtures
+
+    external_call_counter = 0
+
+    @task_registry.register("test_external_charge_task")
+    async def handle_test_charge(payload: dict, ctx: ExecutionContext):
+        nonlocal external_call_counter
+
+        async def charge_gateway():
+            nonlocal external_call_counter
+            external_call_counter += 1
+            return {"charge_id": "ch_test_999", "status": "succeeded", "call_count": external_call_counter}
+
+        # Guaranteed idempotent operation
+        result = await ctx.execute_idempotent_operation("payment_gateway_charge", charge_gateway)
+        return result
+
+    # 1. Create Job with max_retries = 2
+    job = Job(
+        queue_id=queue.id,
+        name="test_external_charge_task",
+        status=JobStatus.QUEUED,
+        payload={"order_id": "ord_888"},
+        max_retries=2,
+    )
+    db_session.add(job)
+    await db_session.commit()
+    await db_session.refresh(job)
+
+    # 2. Worker 1 claims job (Attempt 1)
+    job.status = JobStatus.RUNNING
+    job.locked_by_worker_id = "worker-node-1"
+    job.attempt_count = 1
+    await db_session.commit()
+
+    exec_1 = await TaskRunner.execute_job(db_session, job.id, "worker-node-1")
+    assert exec_1.attempt_number == 1
+    assert exec_1.id is not None
+    assert external_call_counter == 1
+
+    # Verify idempotency record persisted in DB
+    key = f"job:{job.id}:op:payment_gateway_charge"
+    rec_res = await db_session.execute(select(IdempotencyRecord).where(IdempotencyRecord.key == key))
+    rec = rec_res.scalar_one_or_none()
+    assert rec is not None
+    assert rec.response_payload["charge_id"] == "ch_test_999"
+
+    # 3. Simulate Worker 1 crashing before acknowledging DB completion:
+    # Job lease expires, reaper resets to QUEUED, Worker 2 claims for Attempt 2
+    job.status = JobStatus.RUNNING
+    job.locked_by_worker_id = "worker-node-2"
+    job.attempt_count = 2
+    await db_session.commit()
+
+    exec_2 = await TaskRunner.execute_job(db_session, job.id, "worker-node-2")
+    assert exec_2.attempt_number == 2
+    assert exec_2.id != exec_1.id  # New unique execution_id
+
+    # CRITICAL: External payment gateway was NOT called a second time!
+    assert external_call_counter == 1
+    assert exec_2.status.value == "success"
+

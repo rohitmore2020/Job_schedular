@@ -107,3 +107,30 @@ async def handle_calculate_report(payload: Dict[str, Any]) -> Dict[str, Any]:
         "total_rows_aggregated": 45000,
         "download_url": f"https://cdn.example.com/reports/{report_type}.pdf",
     }
+
+
+@task_registry.register("charge_payment")
+@task_registry.register("process_stripe_payment")
+async def handle_charge_payment(payload: Dict[str, Any], context: Any = None) -> Dict[str, Any]:
+    customer_id = payload.get("customer_id", "cust_12345")
+    amount_cents = payload.get("amount_cents", 5000)
+
+    async def execute_stripe_call():
+        print(f"[Payment Gateway] Submitting charge for customer '{customer_id}' (${amount_cents / 100:.2f})...")
+        await asyncio.sleep(0.01)
+        charge_id = f"ch_mock_{customer_id[:6]}_{amount_cents}"
+        print(f"[Payment Gateway] Charge succeeded: {charge_id}")
+        return {
+            "charge_id": charge_id,
+            "amount_cents": amount_cents,
+            "status": "succeeded",
+        }
+
+    if context and hasattr(context, "execute_idempotent_operation"):
+        # Executes external side-effect with database-backed idempotency record
+        result = await context.execute_idempotent_operation("stripe_charge", execute_stripe_call)
+    else:
+        result = await execute_stripe_call()
+
+    return result
+

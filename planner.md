@@ -326,6 +326,14 @@ When a job fails and `attempt_count < max_retries`, the next execution delay is 
 The job is updated:
 `UPDATE jobs SET status = 'queued', run_at = NOW() + INTERVAL '... seconds' WHERE id = :job_id;`
 
+### 5.5 At-Least-Once Execution & Side-Effect Idempotency Protocol
+In distributed job processing, crashes and network partitions mean that true "exactly-once" execution across external third parties is impossible. Our system is formally architected as:
+> **At-Least-Once execution with idempotent job submission, lease-based recovery, and side-effect idempotency.**
+
+1. **Unique Execution Tracking:** Every execution instance is stamped with a unique `execution_id` (UUID) and attempt number via `ExecutionContext`.
+2. **Side-Effect Idempotency Records:** Tasks executing external operations (e.g. Stripe charge, Email API) call `ctx.execute_idempotent_operation(operation, func)`.
+3. **Recovery Protection:** If a worker crashes mid-task after the external call occurs, the subsequent worker that picks up the job on lease expiry checks `idempotency_records` and skips re-executing the external side-effect.
+
 ---
 
 ## 6. API Design & Surface Specification

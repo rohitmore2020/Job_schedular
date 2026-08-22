@@ -14,6 +14,7 @@ from backend.app.models.queue import Queue, RetryPolicy
 from backend.app.models.job import Job, JobExecution, DLQEntry
 from backend.app.models.schedule import ScheduledJob
 from backend.app.models.worker import Worker, WorkerHeartbeat
+from backend.app.models.idempotency import IdempotencyRecord
 
 __all__ = [
     "Base",
@@ -34,4 +35,5 @@ __all__ = [
     "ScheduledJob",
     "Worker",
     "WorkerHeartbeat",
+    "IdempotencyRecord",
 ]

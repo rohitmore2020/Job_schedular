@@ -61,3 +61,51 @@ We chose **PostgreSQL with `FOR UPDATE SKIP LOCKED` and partial indexes**. For 9
 - Child jobs stay in `SCHEDULED` status with `run_at = datetime.max`.
 - When the parent job successfully transitions to `COMPLETED`, the worker runner atomically unblocks all child jobs to `QUEUED` with `run_at = NOW()`.
 - If the parent dies permanently in DLQ, dependent child jobs are automatically cascade-cancelled.
+
+---
+
+## 7. Execution Semantics: At-Least-Once Execution & Side-Effect Idempotency
+
+### The Distributed Systems Reality: Why "Exactly-Once" is a Myth
+In distributed job processing, network partitions, out-of-memory crashes, and lease expirations make true end-to-end "exactly-once" execution across external side effects impossible:
+
+```
+Worker A claims Job
+       ↓
+Executes task & performs external side effect (e.g. Stripe charge, Email API)
+       ↓
+Worker A crashes (kernel panic / OOM / network disconnect) before acknowledging DB
+       ↓
+Lease expires in database (`lock_expires_at < NOW()`)
+       ↓
+Worker B claims and re-executes same Job (Attempt 2)
+```
+
+Without explicit application-level idempotency, the external side effect would be executed twice.
+
+### Architectural Classification & Guarantee:
+Our scheduler is architected and formally documented as:
+> **At-Least-Once execution with idempotent job submission, lease-based recovery, and task-level side-effect idempotency.**
+
+### How Idempotent Execution is Achieved:
+1. **Execution Metadata & Context:**
+   Every job execution receives a unique `execution_id` (UUID) and explicitly exposes `attempt_number` via `ExecutionContext`.
+2. **Side-Effect Idempotency Pattern:**
+   For tasks interacting with external third-party systems, handlers use the built-in database-backed idempotency mechanism:
+
+```
+job_id + operation_name
+          ↓
+Check `idempotency_records` (key: `job:<job_id>:op:<operation>`)
+          ├── If found ('completed'): Skip external call & return cached result
+          └── If not found:
+                    ↓
+              Execute external side effect
+                    ↓
+              Persist record in `idempotency_records`
+                    ↓
+              Return result
+```
+
+This guarantees that even when lease recovery triggers multiple execution attempts of a job, all external side effects execute **effectively once**.
+

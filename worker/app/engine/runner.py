@@ -15,6 +15,9 @@ from worker.app.tasks.registry import task_registry
 from worker.app.engine.retry import RetryBackoffCalculator
 from worker.app.engine.ai_diagnostics import AIDiagnosticEngine
 
+import inspect
+from worker.app.engine.context import ExecutionContext
+
 logger = logging.getLogger("scheduler.runner")
 
 
@@ -45,8 +48,24 @@ class TaskRunner:
         log_buffer = io.StringIO()
         start_wall_time = datetime.now(timezone.utc)
         start_perf = time.perf_counter()
+        execution_id = uuid.uuid4()
 
-        logger.info(f"▶️ [Worker {worker_id}] Executing Job '{job.name}' (ID: {job.id}, Attempt: {job.attempt_count})")
+        context = ExecutionContext(
+            execution_id=execution_id,
+            job_id=job.id,
+            queue_id=job.queue_id,
+            job_name=job.name,
+            attempt_number=job.attempt_count,
+            max_retries=job.max_retries,
+            idempotency_key=job.idempotency_key,
+            worker_id=worker_id,
+            db_session=session,
+        )
+
+        logger.info(
+            f"▶️ [Worker {worker_id}] Executing Job '{job.name}' (ID: {job.id}, "
+            f"Execution ID: {execution_id}, Attempt: {job.attempt_count}/{job.max_retries})"
+        )
 
         handler = task_registry.get(job.name)
         status_enum = ExecutionStatus.SUCCESS
@@ -56,7 +75,12 @@ class TaskRunner:
 
         try:
             with redirect_stdout(log_buffer), redirect_stderr(log_buffer):
-                result_payload = await handler(job.payload)
+                # Inspect handler signature to support both (payload) and (payload, context)
+                sig = inspect.signature(handler)
+                if len(sig.parameters) >= 2 or "context" in sig.parameters or "ctx" in sig.parameters:
+                    result_payload = await handler(job.payload, context)
+                else:
+                    result_payload = await handler(job.payload)
         except Exception as e:
             status_enum = ExecutionStatus.FAILED
             error_msg = str(e)
@@ -68,8 +92,9 @@ class TaskRunner:
             duration_ms = max(1, int((end_perf - start_perf) * 1000))
             logs_captured = log_buffer.getvalue()
 
-        # Record execution audit log
+        # Record execution audit log with explicit execution_id and attempt_number
         execution = JobExecution(
+            id=execution_id,
             job_id=job.id,
             worker_id=worker_id,
             attempt_number=job.attempt_count,

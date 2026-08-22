@@ -106,3 +106,9 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - Automatically parses exception type, traceback, and input arguments.
 - Categorizes failure (Memory OOM, Network Timeout, Schema Validation, Auth Rejection, Database Deadlock).
 - Provides actionable remediation and `Safe to Replay` indicators.
+
+### 2.8 Execution Guarantees & Side-Effect Idempotency
+- **System Guarantee:** At-least-once execution with idempotent job submission and lease-based crash recovery.
+- **Execution Context:** Every execution instance is injected with a unique `execution_id` (UUID) and explicit `attempt_number` via `ExecutionContext`.
+- **Side-Effect Idempotency Protocol:** External operations (e.g. payment gateway charges, third-party API mutations, webhook calls) use the built-in `execute_idempotent_operation` helper which persists `job_id + operation` records in `idempotency_records` to guarantee zero duplicate external side-effects across retry attempts.
+

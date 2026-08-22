@@ -5,10 +5,10 @@
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-42%2F42%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-43%2F43%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
+> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, at-least-once execution semantics with side-effect idempotency, worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
 
 ---
 
@@ -97,16 +97,17 @@ flowchart TB
 
 ## ✨ Key Engineering Features
 
-- **🔒 Atomic Claiming with `FOR UPDATE SKIP LOCKED`**: Zero duplicate job execution guarantee across racing workers.
+- **🔒 Atomic Claiming & Queue Serialization**: Queue row-level locking + `FOR UPDATE SKIP LOCKED` guarantees strict concurrency adherence without double execution.
+- **🛡️ At-Least-Once Execution & Side-Effect Idempotency**: Stamped `execution_id` and attempt tracking via `ExecutionContext` paired with database-backed `idempotency_records` to safeguard third-party external side-effects across retries.
 - **⚡ Partial B-Tree Indexes**: Sub-millisecond polling lookups even with 10M+ completed jobs.
-- **🛡️ Worker Heartbeat Leases & Zombie Reaper**: Recovers orphaned jobs within 10s if a worker crashes.
-- **🔄 Exponential Backoff with Full Jitter**: Prevents thundering herds on failing external services.
+- **🔄 Worker Heartbeat Leases & Zombie Reaper**: Recovers orphaned jobs within 10s if a worker crashes.
+- **📈 Exponential Backoff with Full Jitter**: Prevents thundering herds on failing external services.
 - **💀 Dead Letter Queue (DLQ) Incident Center**: Stack trace capture, 1-click single replay & bulk redrive.
 - **⛓️ DAG Workflow Dependencies**: Parent-child chaining with automatic child unblocking on success and cascade cancellation on failure.
 - **🪣 Token-Bucket Rate Limiter**: Enforces strict `rate_limit_rps` per queue.
 - **🧠 AI-Assisted Root Cause Diagnosis**: Analyzes exceptions (OOM, Timeouts, Validation) and recommends fixes.
 - **📡 Real-Time WebSockets**: Live status broadcasts to browser dashboard without client polling.
-- **🔑 Client Idempotency**: `Idempotency-Key` header with SHA-256 deduplication.
+- **🔑 Client Idempotency**: `Idempotency-Key` header with deduplication.
 
 ---
 
