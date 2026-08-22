@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scheduler_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-job_scheduler}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d job_scheduler"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: scheduler_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/job_scheduler
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/job_scheduler
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-super_secret_jwt_key_change_in_production_min_32_bytes}
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_demo.py &&
+             uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: scheduler_worker_1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/job_scheduler
+      - WORKER_CONCURRENCY=5
+      - HEARTBEAT_INTERVAL_SECONDS=5
+      - JOB_LOCK_TIMEOUT_SECONDS=30
+    command: python -m worker.main
+
+  reaper_scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: scheduler_reaper_cron
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/job_scheduler
+      - REAPER_SCAN_INTERVAL_SECONDS=10
+      - CRON_SCAN_INTERVAL_SECONDS=5
+    command: python -m worker.scheduler_main
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: scheduler_frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+      - "5173:80"
+
+volumes:
+  postgres_data:
+    driver: local
