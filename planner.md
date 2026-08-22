@@ -14,7 +14,7 @@
 7. [Worker Service Architecture & Lifecycle](#7-worker-service-architecture--lifecycle)
 8. [Frontend Dashboard & UX Specification](#8-frontend-dashboard--ux-specification)
 9. [Bonus Engineering Features (Score Multipliers)](#9-bonus-engineering-features-score-multipliers)
-10. [Day-by-Day Implementation Roadmap (14-Day Sprint)](#10-day-by-day-implementation-roadmap-14-day-sprint)
+10. [Phased Implementation Roadmap](#10-phased-implementation-roadmap)
 11. [Testing Strategy & Concurrency Verification](#11-testing-strategy--concurrency-verification)
 12. [Deliverables Checklist](#12-deliverables-checklist)
 
@@ -246,36 +246,53 @@ WHERE idempotency_key IS NOT NULL;
 
 ## 5. Core Concurrency & Reliability Engine
 
-### 5.1 Atomic Job Claiming (Strict Zero-Double-Execution)
-To guarantee that multiple concurrent workers polling the same or different queues never claim the same job, we execute a single atomic CTE with `FOR UPDATE SKIP LOCKED`:
+### 5.1 Atomic Job Claiming & Queue-Level Concurrency Serialization
+To guarantee that multiple concurrent workers polling the same or different queues never claim the same job AND strictly adhere to queue concurrency limits under high parallel load, we use a two-tiered serialization and lock claiming architecture:
+
+1. **Queue-Level Row Serialization (`SELECT ... FOR UPDATE`):**
+   Acquires an exclusive row lock on the target queue. In PostgreSQL's Read Committed mode, subsequent sequential statements in the transaction evaluate fresh, committed snapshots.
+2. **Fresh Active Running Check:**
+   Counts active executing jobs (`status = 'running' AND lock_expires_at > NOW()`) while holding the queue row lock.
+3. **Atomic Row Claiming (`FOR UPDATE SKIP LOCKED`):**
+   Claims the highest priority candidate ready job (`status = 'queued' AND run_at <= NOW()`) if and only if `active_count < queue.concurrency_limit`.
+4. **Immediate Status Promotion & Release:**
+   Promotes the job to `running` with a lease timeout and commits the transaction, immediately releasing the queue lock to unblock concurrent worker consumers.
 
 ```sql
-WITH next_candidate AS (
-    SELECT j.id
-    FROM jobs j
-    JOIN queues q ON j.queue_id = q.id
-    WHERE j.status = 'queued'
-      AND j.run_at <= NOW()
-      AND q.is_paused = FALSE
-      -- Ensure queue concurrency limit is respected
-      AND (
-          SELECT COUNT(*) 
-          FROM jobs active_j 
-          WHERE active_j.queue_id = q.id AND active_j.status = 'running'
-      ) < q.concurrency_limit
-    ORDER BY q.priority DESC, j.priority DESC, j.run_at ASC
+-- Step 1: Lock queue row for atomic serialization
+SELECT id, concurrency_limit, is_paused, rate_limit_rps
+FROM queues
+WHERE id = :target_queue_id
+FOR UPDATE;
+
+-- Step 2: Fresh snapshot check of running jobs
+SELECT COUNT(*)
+FROM jobs
+WHERE queue_id = :target_queue_id
+  AND status = 'running'
+  AND (lock_expires_at IS NULL OR lock_expires_at > NOW());
+
+-- Step 3: Claim ready job with SKIP LOCKED (executed if running_cnt < concurrency_limit)
+WITH candidate AS (
+    SELECT id
+    FROM jobs
+    WHERE queue_id = :target_queue_id
+      AND status = 'queued'
+      AND run_at <= NOW()
+    ORDER BY priority DESC, run_at ASC
     LIMIT 1
     FOR UPDATE SKIP LOCKED
 )
 UPDATE jobs
 SET status = 'running',
     locked_by_worker_id = :worker_id,
-    lock_expires_at = NOW() + INTERVAL '30 seconds',
+    lock_expires_at = NOW() + (:lock_seconds * INTERVAL '1 second'),
     started_at = NOW(),
+    claimed_at = NOW(),
     attempt_count = attempt_count + 1,
     updated_at = NOW()
-WHERE id IN (SELECT id FROM next_candidate)
-RETURNING *;
+WHERE id IN (SELECT id FROM candidate)
+RETURNING id;
 ```
 
 ### 5.2 Worker Distributed Lease & Heartbeat Loop
@@ -457,82 +474,68 @@ A visually stunning, dark-mode-first, real-time dashboard built with React + Vit
 
 ---
 
-## 10. Day-by-Day Implementation Roadmap (14-Day Sprint)
+## 10. Phased Implementation Roadmap
 
 ```
-[ Phase 1: Foundations (Days 1-3) ] ──► [ Phase 2: Core Engine (Days 4-6) ]
-                                                        │
-[ Phase 4: Full Stack UI (Days 10-12) ] ◄── [ Phase 3: Reliability & Retries (Days 7-9) ]
+[ Phase 1: Foundations ] ──► [ Phase 2: Core Engine ]
+                                       │
+[ Phase 4: Full Stack UI ] ◄── [ Phase 3: Reliability & Retries ]
            │
            ▼
-[ Phase 5: Bonus Features, Concurrency Testing & Final Polish (Days 13-14) ]
+[ Phase 5: Bonus Features, Concurrency Testing & Final Polish ]
 ```
 
-### 📅 Phase 1: Project Setup & Database Foundations (Days 1–3)
-- **Day 1:**
-  - [x] Project structure initialization (Monorepo: `backend/`, `worker/`, `frontend/`, `docs/`, `docker/`).
-  - [x] Docker Compose setup: PostgreSQL 16 with health checks and persistent volume.
-  - [x] Python virtual environment, dependencies (`fastapi`, `sqlalchemy[asyncio]`, `asyncpg`, `pydantic`, `alembic`, `pytest`).
-- **Day 2:**
-  - [x] Write SQLAlchemy 2.0 Async models for all 10 core tables (`users`, `orgs`, `projects`, `queues`, `retry_policies`, `jobs`, `job_executions`, `workers`, `scheduled_jobs`, `dlq`).
-  - [x] Setup Alembic async migrations; generate first baseline migration.
-  - [x] Write database seed script (`scripts/seed_demo.py`) with realistic mock data.
-- **Day 3:**
-  - [x] Implement database indexes (partial index for queue polling, composite index for reaper).
-  - [x] Create `make reset-db` and `make migrate` helper scripts.
-  - [x] Verify clean zero-to-running local development environment.
+### 🎯 Phase 1: Project Setup & Database Foundations
+- [x] Project structure initialization (Monorepo: `backend/`, `worker/`, `frontend/`, `docs/`, `docker/`).
+- [x] Docker Compose setup: PostgreSQL 16 with health checks and persistent volume.
+- [x] Python virtual environment, dependencies (`fastapi`, `sqlalchemy[asyncio]`, `asyncpg`, `pydantic`, `alembic`, `pytest`).
+- [x] Write SQLAlchemy 2.0 Async models for all 10 core tables (`users`, `orgs`, `projects`, `queues`, `retry_policies`, `jobs`, `job_executions`, `workers`, `scheduled_jobs`, `dlq`).
+- [x] Setup Alembic async migrations; generate first baseline migration.
+- [x] Write database seed script (`scripts/seed_demo.py`) with realistic mock data.
+- [x] Implement database indexes (partial index for queue polling, composite index for reaper).
+- [x] Create `make reset-db` and `make migrate` helper scripts.
+- [x] Verify clean zero-to-running local development environment.
 
-### 📅 Phase 2: Auth, Projects & Control Plane APIs (Days 4–6)
-- **Day 4:**
-  - [x] Authentication system: Password hashing with bcrypt, JWT access + refresh tokens.
-  - [x] Auth endpoints (`/api/v1/auth/signup`, `/login`, `/refresh`, `/me`).
-  - [x] FastAPI auth dependency `get_current_user` and role verification.
-- **Day 5:**
-  - [x] Project and Queue CRUD endpoints (`/api/v1/projects`, `/api/v1/queues`).
-  - [x] Queue pause & resume endpoints with immediate effect on claiming.
-  - [x] Pydantic validation schemas for all requests and responses.
-- **Day 6:**
-  - [x] Job submission API (`POST /api/v1/queues/{id}/jobs` with immediate & delayed scheduling).
-  - [x] Idempotency key handling (deduplication check in single transaction).
-  - [x] Batch job submission endpoint (up to 1,000 jobs in atomic batch insert).
+### 🎯 Phase 2: Auth, Projects & Control Plane APIs
+- [x] Authentication system: Password hashing with bcrypt, JWT access + refresh tokens.
+- [x] Auth endpoints (`/api/v1/auth/signup`, `/login`, `/refresh`, `/me`).
+- [x] FastAPI auth dependency `get_current_user` and role verification.
+- [x] Project and Queue CRUD endpoints (`/api/v1/projects`, `/api/v1/queues`).
+- [x] Queue pause & resume endpoints with immediate effect on claiming.
+- [x] Pydantic validation schemas for all requests and responses.
+- [x] Job submission API (`POST /api/v1/queues/{id}/jobs` with immediate & delayed scheduling).
+- [x] Idempotency key handling (deduplication check in single transaction).
+- [x] Batch job submission endpoint (up to 1,000 jobs in atomic batch insert).
 
-### 📅 Phase 3: Worker Engine, Concurrency & Reliability (Days 7–9)
-- **Day 7:**
-  - [x] Build Worker Daemon: Polling loop with `FOR UPDATE SKIP LOCKED`.
-  - [x] Implement local concurrency semaphore per worker process.
-  - [x] Job execution runner: Sandboxed execution, timeout cancellation, stdout/stderr capture.
-- **Day 8:**
-  - [x] Worker heartbeat background thread & lease lock extension.
-  - [x] Zombie Worker / Lease Reaper Daemon: Automatically reclaim jobs when worker dies.
-  - [x] Graceful shutdown handler (`SIGINT`/`SIGTERM` handling, in-flight job draining).
-- **Day 9:**
-  - [x] Retry engine: Configurable backoff (Fixed, Linear, Exponential with Full Jitter).
-  - [x] Dead Letter Queue (DLQ) automatic routing upon exceeding `max_retries`.
-  - [x] DLQ Redrive / Replay API endpoints (`POST /api/v1/dlq/{id}/replay`).
+### 🎯 Phase 3: Worker Engine, Concurrency & Reliability
+- [x] Build Worker Daemon: Polling loop with queue-level row locking and `FOR UPDATE SKIP LOCKED`.
+- [x] Implement local concurrency semaphore per worker process.
+- [x] Job execution runner: Sandboxed execution, timeout cancellation, stdout/stderr capture.
+- [x] Worker heartbeat background thread & lease lock extension.
+- [x] Zombie Worker / Lease Reaper Daemon: Automatically reclaim jobs when worker dies.
+- [x] Graceful shutdown handler (`SIGINT`/`SIGTERM` handling, in-flight job draining).
+- [x] Retry engine: Configurable backoff (Fixed, Linear, Exponential with Full Jitter).
+- [x] Dead Letter Queue (DLQ) automatic routing upon exceeding `max_retries`.
+- [x] DLQ Redrive / Replay API endpoints (`POST /api/v1/dlq/{id}/replay`).
 
-### 📅 Phase 4: Scheduling, Cron & Dashboard Frontend (Days 10–12)
-- **Day 10:**
-  - [x] Cron / Recurring Job Dispatcher (parses cron expressions, computes `next_run_at`, materializes job instances).
-  - [x] WebSocket / SSE endpoint for live stats & logs broadcast.
-- **Day 11:**
-  - [x] Setup React 18 + Vite + Tailwind CSS frontend application.
-  - [x] Build Navigation, Metrics Ribbon, and Queue Management Views.
-  - [x] Implement Queue Pause/Resume and Configuration Modals.
-- **Day 12:**
-  - [x] Build Job Explorer with status filter tabs and search.
-  - [x] Build Job Details Drawer with Execution Timeline and Live Log Terminal.
-  - [x] Build Worker Fleet Monitor and DLQ Replay Inspector.
+### 🎯 Phase 4: Scheduling, Cron & Dashboard Frontend
+- [x] Cron / Recurring Job Dispatcher (parses cron expressions, computes `next_run_at`, materializes job instances).
+- [x] WebSocket / SSE endpoint for live stats & logs broadcast.
+- [x] Setup React 18 + Vite + Tailwind CSS frontend application.
+- [x] Build Navigation, Metrics Ribbon, and Queue Management Views.
+- [x] Implement Queue Pause/Resume and Configuration Modals.
+- [x] Build Job Explorer with status filter tabs and search.
+- [x] Build Job Details Drawer with Execution Timeline and Live Log Terminal.
+- [x] Build Worker Fleet Monitor and DLQ Replay Inspector.
 
-### 📅 Phase 5: Bonus Features, Concurrency Testing & Final Deliverables (Days 13–14)
-- **Day 13:**
-  - [x] Bonus: DAG Workflow dependencies engine.
-  - [x] Bonus: Rate limiting token bucket per queue.
-  - [x] Bonus: AI-generated failure summary on DLQ item inspection.
-- **Day 14:**
-  - [x] Write rigorous concurrency test suite (multiple workers racing for jobs).
-  - [x] Generate Architecture Diagram, ER Diagram, and API Reference docs.
-  - [x] Write `docs/design-decisions.md` detailing architectural trade-offs.
-  - [x] End-to-end verification via Docker Compose.
+### 🎯 Phase 5: Bonus Features, Concurrency Testing & Final Deliverables
+- [x] Bonus: DAG Workflow dependencies engine.
+- [x] Bonus: Rate limiting token bucket per queue.
+- [x] Bonus: AI-generated failure summary on DLQ item inspection.
+- [x] Write rigorous concurrency test suite (multiple workers racing for jobs, atomic queue concurrency limit verification).
+- [x] Generate Architecture Diagram, ER Diagram, and API Reference docs.
+- [x] Write `docs/design-decisions.md` detailing architectural trade-offs.
+- [x] End-to-end verification via Docker Compose.
 
 ---
 

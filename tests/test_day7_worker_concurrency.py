@@ -228,6 +228,62 @@ async def test_worker_respects_queue_concurrency_limit(db_session, queue_fixture
 
 
 @pytest.mark.asyncio
+async def test_parallel_workers_strictly_enforce_queue_concurrency_limit(db_session, queue_fixture):
+    """
+    CRITICAL ATOMICITY TEST:
+    Spawn 10 parallel worker sessions simultaneously racing to claim from a queue with concurrency_limit = 2.
+    Asserts that EXACTLY 2 workers succeed in claiming, 8 workers receive None,
+    and the number of concurrently running jobs in the database NEVER exceeds 2.
+    """
+    from tests.conftest import TestSessionLocal
+
+    queue = queue_fixture
+    queue.concurrency_limit = 2
+    await db_session.commit()
+
+    # Insert 10 ready jobs
+    jobs = [
+        Job(
+            queue_id=queue.id,
+            name="process_video",
+            status=JobStatus.QUEUED,
+            payload={"video_id": i},
+            priority=10,
+        )
+        for i in range(10)
+    ]
+    db_session.add_all(jobs)
+    await db_session.commit()
+
+    async def claim_task(worker_index: int):
+        async with TestSessionLocal() as session:
+            worker_id = f"atomic-race-worker-{worker_index}"
+            return await AtomicClaimer.claim_next_job(
+                session, worker_id, assigned_queues=[queue.name]
+            )
+
+    # 10 workers simultaneously attempt to claim
+    claimed_results = await asyncio.gather(*[claim_task(i) for i in range(10)])
+
+    claimed_jobs = [j for j in claimed_results if j is not None]
+    rejected_claims = [j for j in claimed_results if j is None]
+
+    # Exactly 2 should have succeeded and 8 rejected
+    assert len(claimed_jobs) == 2
+    assert len(rejected_claims) == 8
+
+    # Verify database state
+    res_running = await db_session.execute(
+        select(func.count(Job.id)).where(
+            Job.queue_id == queue.id,
+            Job.status == JobStatus.RUNNING,
+        )
+    )
+    running_count = res_running.scalar()
+    assert running_count == 2
+
+
+@pytest.mark.asyncio
 async def test_failing_task_captures_traceback_and_dlq(db_session, queue_fixture):
     """Verify failing task captures stack trace and moves to DLQ on max retries."""
     queue = queue_fixture
