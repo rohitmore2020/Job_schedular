@@ -2,7 +2,8 @@ import uuid
 import math
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
-from sqlalchemy import select, func, desc, or_
+from sqlalchemy import select, func, desc, or_, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
@@ -29,13 +30,14 @@ class JobService:
         header_idempotency_key: Optional[str] = None,
     ) -> JobResponse:
         queue = await QueueService.get_queue(db, user, queue_id)
+        target_queue_id = queue.id
 
         idempotency_key = req.idempotency_key or header_idempotency_key
 
-        # 1. Atomic Idempotency Check
+        # 1. Fast path: check if idempotency key already exists in DB
         if idempotency_key:
             stmt = select(Job).where(
-                Job.queue_id == queue.id,
+                Job.queue_id == target_queue_id,
                 Job.idempotency_key == idempotency_key,
             )
             result = await db.execute(stmt)
@@ -78,23 +80,77 @@ class JobService:
                 initial_status = JobStatus.QUEUED
                 run_at = now_utc
 
-        job = Job(
-            queue_id=queue.id,
-            idempotency_key=idempotency_key,
-            name=req.name,
-            status=initial_status,
-            priority=req.priority,
-            payload=req.payload,
-            max_retries=req.max_retries,
-            run_at=run_at,
-            parent_job_id=req.parent_job_id,
-            tags=req.tags,
-        )
-        db.add(job)
-        await db.commit()
-        await db.refresh(job)
-
-        return JobResponse.model_validate(job)
+        # 3. Atomic INSERT with ON CONFLICT (queue_id, idempotency_key) DO NOTHING
+        if idempotency_key:
+            job_id = uuid.uuid4()
+            insert_stmt = (
+                pg_insert(Job)
+                .values(
+                    id=job_id,
+                    queue_id=target_queue_id,
+                    idempotency_key=idempotency_key,
+                    name=req.name,
+                    status=initial_status,
+                    priority=req.priority,
+                    payload=req.payload,
+                    max_retries=req.max_retries,
+                    run_at=run_at,
+                    parent_job_id=req.parent_job_id,
+                    tags=req.tags,
+                    created_at=now_utc,
+                    updated_at=now_utc,
+                )
+                .on_conflict_do_nothing(
+                    index_elements=["queue_id", "idempotency_key"],
+                    index_where=text("idempotency_key IS NOT NULL"),
+                )
+                .returning(Job.id)
+            )
+            try:
+                res_insert = await db.execute(insert_stmt)
+                row = res_insert.fetchone()
+                if row:
+                    await db.commit()
+                    stmt = select(Job).where(Job.id == row[0])
+                    res = await db.execute(stmt)
+                    job = res.scalar_one()
+                    return JobResponse.model_validate(job)
+                else:
+                    # Conflict occurred (another concurrent transaction inserted same key)
+                    await db.rollback()
+                    stmt = select(Job).where(
+                        Job.queue_id == target_queue_id,
+                        Job.idempotency_key == idempotency_key,
+                    )
+                    res = await db.execute(stmt)
+                    existing_job = res.scalar_one()
+                    return JobResponse.model_validate(existing_job)
+            except Exception:
+                await db.rollback()
+                stmt = select(Job).where(
+                    Job.queue_id == target_queue_id,
+                    Job.idempotency_key == idempotency_key,
+                )
+                res = await db.execute(stmt)
+                existing_job = res.scalar_one()
+                return JobResponse.model_validate(existing_job)
+        else:
+            job = Job(
+                queue_id=target_queue_id,
+                idempotency_key=None,
+                name=req.name,
+                status=initial_status,
+                priority=req.priority,
+                payload=req.payload,
+                max_retries=req.max_retries,
+                run_at=run_at,
+                parent_job_id=req.parent_job_id,
+                tags=req.tags,
+            )
+            db.add(job)
+            await db.commit()
+            await db.refresh(job)
+            return JobResponse.model_validate(job)
 
     @staticmethod
     async def create_jobs_batch(
@@ -104,9 +160,10 @@ class JobService:
         req: JobBatchCreate,
     ) -> List[JobResponse]:
         queue = await QueueService.get_queue(db, user, queue_id)
+        target_queue_id = queue.id
 
         now_utc = datetime.now(timezone.utc)
-        jobs_to_insert = []
+        resolved_job_ids = []
 
         for item in req.jobs:
             run_at = now_utc
@@ -117,27 +174,67 @@ class JobService:
 
             initial_status = JobStatus.SCHEDULED if run_at > now_utc + timedelta(seconds=2) else JobStatus.QUEUED
 
-            job = Job(
-                queue_id=queue.id,
-                idempotency_key=item.idempotency_key,
-                name=item.name,
-                status=initial_status,
-                priority=item.priority,
-                payload=item.payload,
-                max_retries=item.max_retries,
-                run_at=run_at,
-                parent_job_id=item.parent_job_id,
-                tags=item.tags,
-            )
-            jobs_to_insert.append(job)
+            if item.idempotency_key:
+                insert_stmt = (
+                    pg_insert(Job)
+                    .values(
+                        id=uuid.uuid4(),
+                        queue_id=target_queue_id,
+                        idempotency_key=item.idempotency_key,
+                        name=item.name,
+                        status=initial_status,
+                        priority=item.priority,
+                        payload=item.payload,
+                        max_retries=item.max_retries,
+                        run_at=run_at,
+                        parent_job_id=item.parent_job_id,
+                        tags=item.tags,
+                        created_at=now_utc,
+                        updated_at=now_utc,
+                    )
+                    .on_conflict_do_nothing(
+                        index_elements=["queue_id", "idempotency_key"],
+                        index_where=text("idempotency_key IS NOT NULL"),
+                    )
+                    .returning(Job.id)
+                )
+                res_insert = await db.execute(insert_stmt)
+                row = res_insert.fetchone()
+                if row:
+                    resolved_job_ids.append(row[0])
+                else:
+                    stmt = select(Job.id).where(
+                        Job.queue_id == target_queue_id,
+                        Job.idempotency_key == item.idempotency_key,
+                    )
+                    res = await db.execute(stmt)
+                    existing_id = res.scalar_one()
+                    resolved_job_ids.append(existing_id)
+            else:
+                job = Job(
+                    queue_id=target_queue_id,
+                    idempotency_key=None,
+                    name=item.name,
+                    status=initial_status,
+                    priority=item.priority,
+                    payload=item.payload,
+                    max_retries=item.max_retries,
+                    run_at=run_at,
+                    parent_job_id=item.parent_job_id,
+                    tags=item.tags,
+                )
+                db.add(job)
+                await db.flush()
+                resolved_job_ids.append(job.id)
 
-        db.add_all(jobs_to_insert)
         await db.commit()
 
-        for j in jobs_to_insert:
-            await db.refresh(j)
+        # Query all resolved jobs in batch
+        stmt = select(Job).where(Job.id.in_(resolved_job_ids))
+        res = await db.execute(stmt)
+        jobs_map = {j.id: j for j in res.scalars().all()}
 
-        return [JobResponse.model_validate(j) for j in jobs_to_insert]
+        return [JobResponse.model_validate(jobs_map[jid]) for jid in resolved_job_ids if jid in jobs_map]
 
     @staticmethod
     async def list_jobs(

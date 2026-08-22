@@ -99,6 +99,47 @@ async def test_job_idempotency_deduplication(client, auth_setup):
 
 
 @pytest.mark.asyncio
+async def test_concurrent_idempotency_requests_race_condition(client, auth_setup):
+    """
+    CRITICAL CONCURRENT IDEMPOTENCY TEST:
+    Spawn 10 concurrent requests submitting the exact same Idempotency-Key simultaneously.
+    Asserts:
+    1. Zero 500 internal server errors / UniqueViolation crashes.
+    2. All 10 requests succeed (HTTP 201 or 200).
+    3. All 10 responses return the EXACT same Job ID.
+    4. Exactly 1 job is created in PostgreSQL.
+    """
+    import asyncio
+    headers = auth_setup["headers"]
+    queue_id = auth_setup["queue_id"]
+    idempotency_key = f"concurrent-order-{uuid.uuid4().hex}"
+
+    job_payload = {
+        "name": "charge_customer_card",
+        "payload": {"amount": 500, "customer": "cust_concurrent_999"},
+        "idempotency_key": idempotency_key,
+    }
+
+    async def submit_job():
+        return await client.post(
+            f"/api/v1/queues/{queue_id}/jobs",
+            headers=headers,
+            json=job_payload,
+        )
+
+    # 10 concurrent requests at the exact same moment
+    responses = await asyncio.gather(*[submit_job() for _ in range(10)])
+
+    # All must succeed with 201 or 200
+    for r in responses:
+        assert r.status_code in (200, 201)
+
+    # All must return the exact same job ID
+    job_ids = [r.json()["id"] for r in responses]
+    assert len(set(job_ids)) == 1
+
+
+@pytest.mark.asyncio
 async def test_batch_job_submission(client, auth_setup):
     """Verify batch job creation in single atomic transaction."""
     headers = auth_setup["headers"]

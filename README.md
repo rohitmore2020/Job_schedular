@@ -229,7 +229,7 @@ tests/test_day13_bonus_features.py::test_ai_failure_diagnostic_engine PASSED [10
 - 📐 **[docs/architecture.md](docs/architecture.md)** — High-Level Subsystems, Sequence Diagrams & Failure Scenarios.
 - 🗄️ **[docs/erd.md](docs/erd.md)** — Entity Relationship Diagram, Normalized Schema & Partial Indexes.
 - ⚖️ **[docs/design-decisions.md](docs/design-decisions.md)** — Architectural Trade-Offs (PostgreSQL `SKIP LOCKED` vs. Redis/RabbitMQ/Kafka).
-- 📅 **[planner.md](planner.md)** — 14-Day Engineering Roadmap and Deliverables Checklist.
+- 📅 **[planner.md](planner.md)** — Engineering Roadmap and Deliverables Checklist.
 
 ---
 
