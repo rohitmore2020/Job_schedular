@@ -66,10 +66,11 @@ class LeaseReaper:
             )
 
             if job.attempt_count < job.max_retries:
-                # Re-queue job for healthy workers
+                # Re-queue job for healthy workers (resetting lease fencing token)
                 job.status = JobStatus.QUEUED
                 job.run_at = now_utc
                 job.locked_by_worker_id = None
+                job.lease_token = None
                 job.lock_expires_at = None
                 job.error_message = "Worker lease expired (Worker crashed or lost heartbeat)"
                 job.updated_at = now_utc
@@ -79,6 +80,7 @@ class LeaseReaper:
                 # Retries exhausted -> Escalated to Dead Letter Queue
                 job.status = JobStatus.DEAD_LETTER
                 job.locked_by_worker_id = None
+                job.lease_token = None
                 job.lock_expires_at = None
                 job.error_message = "Worker lease expired and maximum retries exhausted"
                 job.updated_at = now_utc

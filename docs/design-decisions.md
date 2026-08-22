@@ -109,3 +109,61 @@ Check `idempotency_records` (key: `job:<job_id>:op:<operation>`)
 
 This guarantees that even when lease recovery triggers multiple execution attempts of a job, all external side effects execute **effectively once**.
 
+---
+
+## 8. Lease Fencing Tokens: Eliminating Split-Brain Zombie Worker State Corruption
+
+### The Problem: Asynchronous Split-Brain Race
+In any distributed lease-based system without fencing:
+```
+Worker A claims Job X (starts execution)
+       ↓
+Worker A loses network or suffers long GC pause (35s)
+       ↓
+Lease expires (`lock_expires_at < NOW()`)
+       ↓
+Lease Reaper reclaims Job X to `QUEUED`
+       ↓
+Worker B claims Job X (starts execution)
+       ↓
+Worker A unpauses and finishes old task
+       ↓
+Worker A attempts UPDATE jobs SET status = 'completed'
+```
+Without fencing, Worker A would blindly overwrite Worker B's active execution, prematurely mark the job complete with stale results, and unlock downstream DAG jobs before Worker B finishes!
+
+### The Solution: Monotonic Fencing Lease Tokens
+Every time a job is claimed, the database generates and assigns a unique `lease_token = UUID`:
+
+```sql
+UPDATE jobs
+SET status = 'running',
+    locked_by_worker_id = :worker_id,
+    lease_token = :lease_token,
+    lock_expires_at = NOW() + INTERVAL '30 seconds',
+    attempt_count = attempt_count + 1
+WHERE id = :job_id
+RETURNING id, lease_token;
+```
+
+When any worker attempts to finalize completion, failure, or DLQ escalation, the SQL update strictly enforces the held lease token:
+
+```sql
+UPDATE jobs
+SET status = 'completed',
+    completed_at = NOW(),
+    locked_by_worker_id = NULL,
+    lease_token = NULL,
+    lock_expires_at = NULL
+WHERE id = :job_id
+  AND lease_token = :held_lease_token
+  AND status = 'running';
+```
+
+### Result:
+- If Worker A was reclaimed by the Reaper and Worker B claimed Job X, the database row now holds `lease_token = Token_B`.
+- Worker A's update with `Token_A` matches **0 rows** (`rowcount == 0`).
+- Worker A's finalization is rejected and aborted (`ExecutionStatus.KILLED`).
+- Worker B executes safely without interference or data corruption.
+
+

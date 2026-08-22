@@ -67,6 +67,7 @@ class JobResponse(BaseModel):
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     locked_by_worker_id: Optional[str] = None
+    lease_token: Optional[uuid.UUID] = None
     lock_expires_at: Optional[datetime] = None
     parent_job_id: Optional[uuid.UUID] = None
     tags: List[str]

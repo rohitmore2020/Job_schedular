@@ -95,7 +95,8 @@ class AtomicClaimer:
                 # Queue is at capacity; check next candidate queue
                 continue
 
-            # 3. Find and claim the next available job
+            # 3. Find and claim the next available job with fresh lease fencing token
+            lease_token = uuid.uuid4()
             claim_stmt = text("""
                 WITH candidate AS (
                     SELECT id
@@ -110,6 +111,7 @@ class AtomicClaimer:
                 UPDATE jobs
                 SET status = 'running',
                     locked_by_worker_id = :worker_id,
+                    lease_token = :lease_token,
                     lock_expires_at = NOW() + (:lock_seconds * INTERVAL '1 second'),
                     started_at = NOW(),
                     claimed_at = NOW(),
@@ -121,6 +123,7 @@ class AtomicClaimer:
             claim_params = {
                 "target_queue_id": target_queue_id,
                 "worker_id": worker_id,
+                "lease_token": lease_token,
                 "lock_seconds": lock_timeout_seconds,
             }
             res_job = await session.execute(claim_stmt, claim_params)
@@ -142,13 +145,14 @@ class AtomicClaimer:
             res = await session.execute(stmt)
             job = res.scalar_one()
 
-            # 5. Enforce Token-Bucket Rate Limiter per Queue
+            # 🪣 Enforce Token-Bucket Rate Limiter per Queue
             if rate_limit_rps:
                 allowed = await QueueRateLimiter.allow_claim(target_queue_id, rate_limit_rps)
                 if not allowed:
                     # Rate limit exceeded for this second -> Revert lock and release
                     job.status = "queued"
                     job.locked_by_worker_id = None
+                    job.lease_token = None
                     job.lock_expires_at = None
                     job.attempt_count = max(0, job.attempt_count - 1)
                     job.started_at = None

@@ -22,6 +22,7 @@ class ExecutionContext:
     attempt_number: int
     max_retries: int
     idempotency_key: Optional[str] = None
+    lease_token: Optional[uuid.UUID] = None
     worker_id: Optional[str] = None
     db_session: Optional[AsyncSession] = None
 

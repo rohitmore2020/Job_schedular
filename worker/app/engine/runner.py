@@ -33,7 +33,13 @@ class TaskRunner:
         session: AsyncSession,
         job_or_id: Union[Job, uuid.UUID],
         worker_id: str,
+        lease_token: Optional[uuid.UUID] = None,
     ) -> JobExecution:
+        # Determine the specific lease token held by this worker instance
+        held_lease_token = lease_token
+        if held_lease_token is None and isinstance(job_or_id, Job):
+            held_lease_token = job_or_id.lease_token
+
         # Load fresh job instance with queue & retry_policy
         job_id = job_or_id if isinstance(job_or_id, uuid.UUID) else job_or_id.id
         stmt = (
@@ -44,6 +50,9 @@ class TaskRunner:
         )
         res = await session.execute(stmt)
         job = res.scalar_one()
+
+        if held_lease_token is None:
+            held_lease_token = job.lease_token
 
         log_buffer = io.StringIO()
         start_wall_time = datetime.now(timezone.utc)
@@ -58,13 +67,14 @@ class TaskRunner:
             attempt_number=job.attempt_count,
             max_retries=job.max_retries,
             idempotency_key=job.idempotency_key,
+            lease_token=held_lease_token,
             worker_id=worker_id,
             db_session=session,
         )
 
         logger.info(
             f"▶️ [Worker {worker_id}] Executing Job '{job.name}' (ID: {job.id}, "
-            f"Execution ID: {execution_id}, Attempt: {job.attempt_count}/{job.max_retries})"
+            f"Execution ID: {execution_id}, Lease: {held_lease_token}, Attempt: {job.attempt_count}/{job.max_retries})"
         )
 
         handler = task_registry.get(job.name)
@@ -108,15 +118,38 @@ class TaskRunner:
         )
         session.add(execution)
 
+        # 🛡️ Atomic Fenced Finalization with Lease Token
         if status_enum == ExecutionStatus.SUCCESS:
-            job.status = JobStatus.COMPLETED
-            job.result = result_payload
-            job.completed_at = end_wall_time
-            job.locked_by_worker_id = None
-            job.lock_expires_at = None
-            job.error_message = None
-            job.updated_at = end_wall_time
-            logger.info(f"✅ [Worker {worker_id}] Job '{job.name}' ({job.id}) completed in {duration_ms}ms")
+            finalize_stmt = (
+                update(Job)
+                .where(
+                    Job.id == job.id,
+                    Job.lease_token == context.lease_token,
+                    Job.status == JobStatus.RUNNING,
+                )
+                .values(
+                    status=JobStatus.COMPLETED,
+                    result=result_payload,
+                    completed_at=end_wall_time,
+                    locked_by_worker_id=None,
+                    lock_expires_at=None,
+                    lease_token=None,
+                    error_message=None,
+                    updated_at=end_wall_time,
+                )
+            )
+            finalize_res = await session.execute(finalize_stmt)
+            if finalize_res.rowcount == 0:
+                logger.warning(
+                    f"⛔ [Fencing Token Mismatch] Worker '{worker_id}' lost lease for Job '{job.name}' (ID: {job.id}, "
+                    f"Token: {context.lease_token}). Finalization rejected (Job was reclaimed by Reaper/another worker)."
+                )
+                execution.status = ExecutionStatus.KILLED
+                execution.error_message = "Fenced: Worker lease expired during execution; finalization aborted."
+                await session.commit()
+                return execution
+
+            logger.info(f"✅ [Worker {worker_id}] Job '{job.name}' ({job.id}) completed in {duration_ms}ms (Lease: {context.lease_token})")
 
             # ⛓️ DAG Workflow: Unlock dependent child jobs
             child_stmt = select(Job).where(
@@ -132,27 +165,72 @@ class TaskRunner:
                 logger.info(f"⛓️ [DAG Engine] Unlocked downstream child Job '{child.name}' ({child.id})")
 
         else:
-            job.error_message = error_msg
-            job.updated_at = end_wall_time
-
-            # Calculate retry vs DLQ
+            # Failure handling with lease fencing token protection
             if job.attempt_count < job.max_retries:
                 retry_policy = job.queue.retry_policy if job.queue else None
                 backoff_seconds = RetryBackoffCalculator.calculate_delay(
                     attempt_number=job.attempt_count,
                     policy=retry_policy,
                 )
-                job.status = JobStatus.QUEUED
-                job.run_at = end_wall_time + timedelta(seconds=backoff_seconds)
-                job.locked_by_worker_id = None
-                job.lock_expires_at = None
+                finalize_stmt = (
+                    update(Job)
+                    .where(
+                        Job.id == job.id,
+                        Job.lease_token == context.lease_token,
+                        Job.status == JobStatus.RUNNING,
+                    )
+                    .values(
+                        status=JobStatus.QUEUED,
+                        run_at=end_wall_time + timedelta(seconds=backoff_seconds),
+                        locked_by_worker_id=None,
+                        lock_expires_at=None,
+                        lease_token=None,
+                        error_message=error_msg,
+                        updated_at=end_wall_time,
+                    )
+                )
+                finalize_res = await session.execute(finalize_stmt)
+                if finalize_res.rowcount == 0:
+                    logger.warning(
+                        f"⛔ [Fencing Token Mismatch] Worker '{worker_id}' lost lease for Job '{job.name}' (ID: {job.id}). "
+                        f"Retry scheduling skipped because lease was reclaimed."
+                    )
+                    execution.status = ExecutionStatus.KILLED
+                    execution.error_message = "Fenced: Worker lease expired during execution."
+                    await session.commit()
+                    return execution
+
                 logger.info(
                     f"🔄 [Worker {worker_id}] Job '{job.name}' ({job.id}) scheduled for retry in {backoff_seconds}s (Attempt {job.attempt_count}/{job.max_retries})"
                 )
             else:
-                job.status = JobStatus.DEAD_LETTER
-                job.locked_by_worker_id = None
-                job.lock_expires_at = None
+                finalize_stmt = (
+                    update(Job)
+                    .where(
+                        Job.id == job.id,
+                        Job.lease_token == context.lease_token,
+                        Job.status == JobStatus.RUNNING,
+                    )
+                    .values(
+                        status=JobStatus.DEAD_LETTER,
+                        locked_by_worker_id=None,
+                        lock_expires_at=None,
+                        lease_token=None,
+                        error_message=error_msg,
+                        updated_at=end_wall_time,
+                    )
+                )
+                finalize_res = await session.execute(finalize_stmt)
+                if finalize_res.rowcount == 0:
+                    logger.warning(
+                        f"⛔ [Fencing Token Mismatch] Worker '{worker_id}' lost lease for Job '{job.name}' (ID: {job.id}). "
+                        f"DLQ escalation skipped because lease was reclaimed."
+                    )
+                    execution.status = ExecutionStatus.KILLED
+                    execution.error_message = "Fenced: Worker lease expired during execution."
+                    await session.commit()
+                    return execution
+
                 logger.warning(f"💀 [Worker {worker_id}] Job '{job.name}' ({job.id}) moved to Dead Letter Queue")
 
                 # 🧠 AI-Assisted Root Cause Diagnosis

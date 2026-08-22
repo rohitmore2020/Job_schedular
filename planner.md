@@ -334,6 +334,13 @@ In distributed job processing, crashes and network partitions mean that true "ex
 2. **Side-Effect Idempotency Records:** Tasks executing external operations (e.g. Stripe charge, Email API) call `ctx.execute_idempotent_operation(operation, func)`.
 3. **Recovery Protection:** If a worker crashes mid-task after the external call occurs, the subsequent worker that picks up the job on lease expiry checks `idempotency_records` and skips re-executing the external side-effect.
 
+### 5.6 Lease Fencing Tokens & Split-Brain Elimination
+To prevent zombie workers (e.g. unpausing from an extended GC pause or network partition after lease expiry) from corrupting active job state:
+1. Every claim stamps a unique `lease_token` (UUID).
+2. All finalization queries (`COMPLETED`, `QUEUED` retry, `DEAD_LETTER`) enforce:
+   `WHERE id = :job_id AND lease_token = :held_lease_token AND status = 'running'`
+3. If the lease was reclaimed by the Reaper and assigned to another worker, the zombie worker's update matches 0 rows and is safely aborted (`ExecutionStatus.KILLED`).
+
 ---
 
 ## 6. API Design & Surface Specification

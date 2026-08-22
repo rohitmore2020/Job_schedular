@@ -152,6 +152,87 @@ async def test_zombie_worker_and_lease_reaper_recovery(db_session, queue_fixture
 
 
 @pytest.mark.asyncio
+async def test_lease_fencing_token_rejects_split_brain_zombie_worker(db_session, queue_fixture):
+    """
+    CRITICAL FENCING TOKEN / SPLIT-BRAIN ISOLATION TEST:
+    1. Worker A claims Job X -> assigned lease_token = Token_A.
+    2. Worker A experiences long pause / network partition; lease expires.
+    3. Reaper reclaims Job X back to 'queued'.
+    4. Worker B claims Job X -> assigned fresh lease_token = Token_B.
+    5. Zombie Worker A wakes up and attempts to finalize Job X with stale Token_A.
+    6. Verify:
+       - Worker A's finalization is FENCED OFF / REJECTED (0 rows updated).
+       - Worker A cannot overwrite Worker B's active execution.
+       - Job remains safely in 'running' state with Token_B under Worker B.
+    7. Worker B finishes execution -> Job transitions cleanly to 'completed'.
+    """
+    queue = queue_fixture
+    job = Job(
+        queue_id=queue.id,
+        name="send_email",
+        status=JobStatus.QUEUED,
+        payload={"email": "fencing_split_brain@example.com"},
+        max_retries=3,
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    # Step 1: Worker A claims the job
+    worker_a_id = "zombie-worker-A"
+    job_worker_a = await AtomicClaimer.claim_next_job(
+        db_session, worker_a_id, assigned_queues=[queue.name]
+    )
+    assert job_worker_a is not None
+    token_a = job_worker_a.lease_token
+    assert token_a is not None
+
+    # Step 2: Worker A gets partitioned / paused (lease expires in past)
+    job_worker_a.lock_expires_at = datetime.now(timezone.utc) - timedelta(seconds=15)
+    await db_session.commit()
+
+    # Step 3: Reaper runs sweep and reclaims the job
+    reaper = LeaseReaper()
+    await reaper.reap_expired_leases(db_session)
+
+    # Step 4: Worker B claims the job and gets a NEW lease token
+    worker_b_id = "active-worker-B"
+    job_worker_b = await AtomicClaimer.claim_next_job(
+        db_session, worker_b_id, assigned_queues=[queue.name]
+    )
+    assert job_worker_b is not None
+    token_b = job_worker_b.lease_token
+    assert token_b is not None
+    assert token_a != token_b
+
+    # Step 5: Zombie Worker A unpauses and tries to complete the job with stale Token_A!
+    # In distributed execution, Worker A holds token_a in its local process memory.
+    stale_execution = await TaskRunner.execute_job(
+        db_session, job_worker_a.id, worker_a_id, lease_token=token_a
+    )
+
+    # Assert: Worker A's finalization was FENCED OFF!
+    assert stale_execution.status == ExecutionStatus.KILLED
+    assert "Fenced" in stale_execution.error_message
+
+    # Verify: Job in database was NOT modified to completed by Worker A; still running with Token_B!
+    await db_session.refresh(job_worker_b)
+    assert job_worker_b.status == JobStatus.RUNNING
+    assert job_worker_b.locked_by_worker_id == worker_b_id
+    assert job_worker_b.lease_token == token_b
+
+    # Step 6: Worker B finishes execution with valid Token_B
+    valid_execution = await TaskRunner.execute_job(db_session, job_worker_b, worker_b_id)
+    assert valid_execution.status == ExecutionStatus.SUCCESS
+
+    # Verify: Job is now legitimately COMPLETED
+    await db_session.refresh(job_worker_b)
+    assert job_worker_b.status == JobStatus.COMPLETED
+    assert job_worker_b.lease_token is None
+    assert job_worker_b.locked_by_worker_id is None
+
+
+
+@pytest.mark.asyncio
 async def test_reaper_escalates_to_dlq_when_retries_exhausted(db_session, queue_fixture):
     """Verify reaper routes expired jobs to DLQ if max_retries has been reached."""
     queue = queue_fixture

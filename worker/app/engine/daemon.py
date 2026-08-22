@@ -108,14 +108,14 @@ class WorkerDaemon:
                     return True
                 return False
 
-    async def _execute_with_semaphore(self, job_id: uuid.UUID):
+    async def _execute_with_semaphore(self, job_id: uuid.UUID, lease_token: Optional[uuid.UUID] = None):
         """Execute task within semaphore concurrency boundary and track active IDs."""
         self.active_job_ids.add(job_id)
         try:
             async with AsyncSessionLocal() as session:
                 job = await session.get(Job, job_id)
                 if job:
-                    await TaskRunner.execute_job(session, job, self.worker_id)
+                    await TaskRunner.execute_job(session, job, self.worker_id, lease_token=lease_token)
         except Exception as e:
             logger.error(f"Error in task execution wrapper: {e}")
         finally:
@@ -142,7 +142,7 @@ class WorkerDaemon:
                     )
 
                 if job:
-                    task = asyncio.create_task(self._execute_with_semaphore(job.id))
+                    task = asyncio.create_task(self._execute_with_semaphore(job.id, job.lease_token))
                     self._active_tasks.add(task)
                     task.add_done_callback(self._active_tasks.discard)
                 else:

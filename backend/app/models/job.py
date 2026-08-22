@@ -54,8 +54,9 @@ class Job(Base):
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # Concurrency Lock & Lease
+    # Concurrency Lock & Lease Fencing
     locked_by_worker_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    lease_token: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     lock_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # DAG & Dependencies

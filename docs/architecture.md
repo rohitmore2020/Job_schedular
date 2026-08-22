@@ -112,3 +112,9 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - **Execution Context:** Every execution instance is injected with a unique `execution_id` (UUID) and explicit `attempt_number` via `ExecutionContext`.
 - **Side-Effect Idempotency Protocol:** External operations (e.g. payment gateway charges, third-party API mutations, webhook calls) use the built-in `execute_idempotent_operation` helper which persists `job_id + operation` records in `idempotency_records` to guarantee zero duplicate external side-effects across retry attempts.
 
+### 2.9 Lease Fencing Tokens & Split-Brain Immunity
+- **Fencing Token Generation:** Each claim sets a unique `lease_token` (UUID) on the job row.
+- **Fenced Finalization:** Finalization updates require `WHERE id = :id AND lease_token = :held_token AND status = 'running'`.
+- **Split-Brain Defense:** If a partitioned or paused zombie worker wakes up after its lease expired and was reclaimed by a new worker, its finalization matches 0 rows and is rejected without corrupting active job state.
+
+
