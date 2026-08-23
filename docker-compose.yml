@@ -43,7 +43,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
-    container_name: scheduler_worker_1
     restart: unless-stopped
     depends_on:
       postgres:

@@ -86,15 +86,26 @@ class LeaseReaper:
                 job.updated_at = now_utc
                 dlq_count += 1
 
-                dlq = DLQEntry(
-                    job_id=job.id,
-                    queue_id=job.queue_id,
-                    failed_reason=f"Worker lease expired after {job.attempt_count} attempts",
-                    total_attempts=job.attempt_count,
-                    last_error="Worker failed to send heartbeat / lease expired",
-                    moved_to_dlq_at=now_utc,
-                )
-                session.add(dlq)
+                existing_dlq_stmt = select(DLQEntry).where(DLQEntry.job_id == job.id)
+                existing_dlq_res = await session.execute(existing_dlq_stmt)
+                existing_dlq = existing_dlq_res.scalar_one_or_none()
+                if existing_dlq:
+                    existing_dlq.failed_reason = f"Worker lease expired after {job.attempt_count} attempts"
+                    existing_dlq.total_attempts = job.attempt_count
+                    existing_dlq.last_error = "Worker failed to send heartbeat / lease expired"
+                    existing_dlq.moved_to_dlq_at = now_utc
+                    existing_dlq.is_replayed = False
+                    existing_dlq.replayed_at = None
+                else:
+                    dlq = DLQEntry(
+                        job_id=job.id,
+                        queue_id=job.queue_id,
+                        failed_reason=f"Worker lease expired after {job.attempt_count} attempts",
+                        total_attempts=job.attempt_count,
+                        last_error="Worker failed to send heartbeat / lease expired",
+                        moved_to_dlq_at=now_utc,
+                    )
+                    session.add(dlq)
                 logger.warning(f"💀 [Reaper] Escalated Job '{job.name}' ({job.id}) to Dead Letter Queue")
 
         await session.commit()
