@@ -354,6 +354,13 @@ To prevent duplicate job creation when multiple scheduler daemon replicas evalua
 3. **Live Progress Computation:** Dynamic calculation of `progress_percent`, `pending_jobs`, and completion states (`COMPLETED`, `PARTIALLY_FAILED`, `FAILED`, `CANCELLED`).
 4. **Lifecycle Control:** Multi-job atomic submission, real-time progress monitoring, batch cancellation, and retry redrive.
 
+### 5.9 Hierarchical Role-Based Access Control (RBAC) & Multi-Tenant Isolation
+1. **Role Hierarchy:**
+   - `ADMIN / OWNER`: Full management over organizations, projects, queues, workers, API keys, and job lifecycles.
+   - `MEMBER / DEVELOPER`: Job submission, batch creation, job cancellation/retry, and schedule management.
+   - `VIEWER`: Strictly read-only access. Mutation endpoints return `403 Forbidden`.
+2. **Cross-Tenant Security Barrier:** All resource queries are strictly scoped to the authenticated user's `org_id`. Requests targeting unauthorized UUIDs from other organizations fail with `404 Not Found`.
+
 ---
 
 ## 6. API Design & Surface Specification

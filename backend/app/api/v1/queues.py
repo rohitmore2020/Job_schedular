@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_admin
 from backend.app.models import User
 from backend.app.schemas.queue import QueueUpdate, QueueResponse
 from backend.app.services.queue_service import QueueService
@@ -39,7 +39,7 @@ async def update_queue(
     queue_id: uuid.UUID,
     req: QueueUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await QueueService.update_queue(db, current_user, queue_id, req)
 
@@ -53,7 +53,7 @@ async def update_queue(
 async def pause_queue(
     queue_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await QueueService.pause_queue(db, current_user, queue_id)
 
@@ -67,7 +67,7 @@ async def pause_queue(
 async def resume_queue(
     queue_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await QueueService.resume_queue(db, current_user, queue_id)
 
@@ -80,6 +80,6 @@ async def resume_queue(
 async def delete_queue(
     queue_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await QueueService.delete_queue(db, current_user, queue_id)

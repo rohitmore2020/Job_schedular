@@ -5,7 +5,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_admin
 from backend.app.models import User, Worker, WorkerHeartbeat, WorkerStatus
 from backend.app.schemas.worker import WorkerResponse, WorkerHeartbeatResponse
 
@@ -65,3 +65,59 @@ async def get_worker_heartbeats(
     result = await db.execute(stmt)
     heartbeats = result.scalars().all()
     return [WorkerHeartbeatResponse.model_validate(h) for h in heartbeats]
+
+
+@router.post(
+    "/{worker_id}/drain",
+    response_model=WorkerResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Drain a worker node (Admin only)",
+)
+async def drain_worker(
+    worker_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Signal a worker node to drain: finish executing active jobs but claim no new ones.
+    """
+    stmt = select(Worker).where(Worker.worker_id == worker_id)
+    result = await db.execute(stmt)
+    worker = result.scalar_one_or_none()
+    if not worker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Worker '{worker_id}' not found",
+        )
+
+    worker.status = WorkerStatus.DRAINING
+    await db.commit()
+    await db.refresh(worker)
+    return WorkerResponse.model_validate(worker)
+
+
+@router.delete(
+    "/{worker_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Deregister/remove a worker from fleet registry (Admin only)",
+)
+async def delete_worker(
+    worker_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Deregister a dead or decommissioned worker node.
+    """
+    stmt = select(Worker).where(Worker.worker_id == worker_id)
+    result = await db.execute(stmt)
+    worker = result.scalar_one_or_none()
+    if not worker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Worker '{worker_id}' not found",
+        )
+
+    await db.delete(worker)
+    await db.commit()
+    return {"success": True, "worker_id": worker_id}

@@ -44,13 +44,20 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, ope
 
         {/* Action Button */}
         <div className="px-4 pt-5 pb-3">
-          <button
-            onClick={openSubmitModal}
-            className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-medium text-xs tracking-wide flex items-center justify-center gap-2 shadow-glow-cyan transition-all transform active:scale-[0.98]"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Submit New Job</span>
-          </button>
+          {user?.role === 'viewer' ? (
+            <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-center text-[11px] text-slate-400">
+              <span className="font-semibold text-amber-400">👁️ Viewer Mode</span>
+              <p className="text-[10px] text-slate-500 mt-0.5">Read-only monitoring</p>
+            </div>
+          ) : (
+            <button
+              onClick={openSubmitModal}
+              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-medium text-xs tracking-wide flex items-center justify-center gap-2 shadow-glow-cyan transition-all transform active:scale-[0.98]"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Submit New Job</span>
+            </button>
+          )}
         </div>
 
         {/* Navigation Items */}
@@ -83,15 +90,28 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, ope
         </nav>
       </div>
 
-      {/* User Footer Card */}
+      {/* User Footer Card with RBAC Role Badge */}
       <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0 shadow-sm">
               {user?.full_name?.charAt(0) || 'U'}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-200 truncate">{user?.full_name || 'Engineer'}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-slate-200 truncate">{user?.full_name || 'Engineer'}</p>
+                <span
+                  className={`text-[9px] font-extrabold uppercase px-1 py-0.2 rounded border ${
+                    user?.role === 'admin'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : user?.role === 'member'
+                      ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {user?.role === 'admin' ? 'ADMIN' : user?.role === 'member' ? 'MEMBER' : 'VIEWER'}
+                </span>
+              </div>
               <p className="text-[10px] text-slate-400 truncate">{user?.organization?.name || 'Production Org'}</p>
             </div>
           </div>

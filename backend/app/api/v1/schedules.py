@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_developer_or_admin
 from backend.app.models import User
 from backend.app.schemas.schedule import (
     ScheduledJobCreate,
@@ -26,7 +26,7 @@ async def create_schedule(
     queue_id: uuid.UUID,
     req: ScheduledJobCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Define a cron-based recurring schedule (e.g. `*/10 * * * *`).
@@ -78,7 +78,7 @@ async def update_schedule(
     schedule_id: uuid.UUID,
     req: ScheduledJobUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     return await ScheduleService.update_schedule(db, current_user, schedule_id, req)
 
@@ -92,7 +92,7 @@ async def update_schedule(
 async def pause_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     return await ScheduleService.pause_schedule(db, current_user, schedule_id)
 
@@ -106,7 +106,7 @@ async def pause_schedule(
 async def resume_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     return await ScheduleService.resume_schedule(db, current_user, schedule_id)
 
@@ -119,6 +119,6 @@ async def resume_schedule(
 async def delete_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     return await ScheduleService.delete_schedule(db, current_user, schedule_id)

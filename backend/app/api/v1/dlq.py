@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_developer_or_admin
 from backend.app.models import User
 from backend.app.schemas.dlq import (
     DLQEntryDetailResponse,
@@ -63,7 +63,7 @@ async def get_dlq_entry(
 async def replay_dlq_entry(
     dlq_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Re-enqueue an unrecoverable job back to `queued` status for immediate re-execution.
@@ -80,7 +80,7 @@ async def replay_dlq_entry(
 async def replay_all_dlq_entries(
     queue_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Bulk replay all active DLQ items in a queue back into the active ready queue.
@@ -96,7 +96,7 @@ async def replay_all_dlq_entries(
 async def purge_dlq_entry(
     dlq_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Purge a dead-letter record after resolution.

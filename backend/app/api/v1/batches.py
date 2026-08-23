@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_developer_or_admin
 from backend.app.models import User, Job, JobStatus, BatchStatus
 from backend.app.schemas.batch import (
     BatchCreate,
@@ -29,7 +29,7 @@ async def create_batch(
     queue_id: uuid.UUID,
     data: BatchCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """Atomically create a JobBatch and enqueue all its child jobs."""
     batch = await BatchService.create_batch(db, current_user, queue_id, data)
@@ -128,7 +128,7 @@ async def get_batch_jobs(
 async def cancel_batch(
     batch_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """Cancel all pending/queued jobs in a batch."""
     return await BatchService.cancel_batch(db, current_user, batch_id)
@@ -142,7 +142,7 @@ async def cancel_batch(
 async def retry_batch(
     batch_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """Re-enqueue all failed/DLQ jobs in a batch."""
     return await BatchService.retry_batch(db, current_user, batch_id)

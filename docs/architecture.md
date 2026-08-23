@@ -128,6 +128,14 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - **Aggregated Telemetry:** Real-time counters (`total_jobs`, `completed_jobs`, `failed_jobs`, `cancelled_jobs`, `progress_percent`).
 - **Batch Control APIs:** Atomic multi-job creation (`POST /api/v1/queues/{id}/batches`), live progress inspection, batch cancellation, and retry redrive.
 
+### 2.12 Hierarchical Role-Based Access Control (RBAC) & Multi-Tenant Security
+- **3-Tier Permission Matrix:**
+  - `Owner / Admin`: Full administrative control across organizations, projects, queues, workers, API keys, and jobs.
+  - `Developer / Member`: Job lifecycle operations (submit, batch enqueue, cancel, retry, DLQ replay, recurring schedules). Administrative mutations forbidden (`403 Forbidden`).
+  - `Viewer`: Read-only telemetry and monitoring. All mutation endpoints return `403 Forbidden`.
+- **Cross-Tenant Isolation Barrier:** Every SQL query joins against `Project` and validates `Project.org_id == current_user.org_id`. Requests targeting unauthorized foreign UUIDs return `404 Not Found` without information leakage.
+
+
 
 
 

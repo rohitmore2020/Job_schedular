@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_developer_or_admin
 from backend.app.models import User, JobStatus
 from backend.app.schemas.job import (
     JobCreate,
@@ -30,7 +30,7 @@ async def create_job(
     req: JobCreate,
     idempotency_key_header: Optional[str] = Header(None, alias="Idempotency-Key"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Enqueue a background job with payload, priority, and optional scheduled execution time.
@@ -51,7 +51,7 @@ async def create_jobs_batch(
     queue_id: uuid.UUID,
     req: JobBatchCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Submit up to 1,000 background jobs in a single bulk database transaction.
@@ -118,7 +118,7 @@ async def get_job(
 async def cancel_job(
     job_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Cancel an in-flight, queued, or scheduled job.
@@ -135,7 +135,7 @@ async def cancel_job(
 async def retry_job(
     job_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_developer_or_admin),
 ):
     """
     Reset and re-enqueue a failed, cancelled, or DLQ job for immediate re-execution.

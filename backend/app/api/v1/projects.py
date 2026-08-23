@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, require_admin
 from backend.app.models import User
 from backend.app.schemas.project import (
     ProjectCreate,
@@ -43,7 +43,7 @@ async def list_projects(
 async def create_project(
     req: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await ProjectService.create_project(db, current_user, req)
 
@@ -76,7 +76,7 @@ async def update_project(
     project_id: uuid.UUID,
     req: ProjectUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await ProjectService.update_project(db, current_user, project_id, req)
 
@@ -91,7 +91,7 @@ async def create_api_key(
     project_id: uuid.UUID,
     req: ProjectAPIKeyCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await ProjectService.create_api_key(db, current_user, project_id, req)
 
@@ -134,6 +134,6 @@ async def create_project_queue(
     project_id: uuid.UUID,
     req: QueueCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     return await QueueService.create_queue(db, current_user, project_id, req)
