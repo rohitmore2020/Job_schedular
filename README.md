@@ -5,10 +5,10 @@
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-59%2F59%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-65%2F65%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, first-class batch orchestration with live aggregated progress, deterministic logical keys for race-free cron dispatching, at-least-once execution semantics with side-effect idempotency, hierarchical RBAC (Owner/Admin, Developer/Member, Viewer), end-to-end full-stack observability (System KPIs, Queue Depths & Wait Times, Worker Fleet Liveness & Heartbeats, Per-Job Latency Breakdowns), worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
+> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, first-class batch orchestration with live aggregated progress, deterministic logical keys for race-free cron dispatching, at-least-once execution semantics with side-effect idempotency, hierarchical RBAC (Owner/Admin, Developer/Member, Viewer), end-to-end full-stack observability (System KPIs, Queue Depths & Wait Times, Worker Fleet Liveness & Heartbeats, Per-Job Latency Breakdowns), exhaustive distributed integration & stress race-condition verification, worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
 
 ---
 
@@ -102,6 +102,13 @@ flowchart TB
 
 ## ✨ Key Engineering Features
 
+- **🧪 Rigorous Distributed Stress & Race Condition Verification**:
+  - **Test 1 (Mutual Exclusion):** 2 parallel workers competing for 1 job $\to$ exactly 1 claim, 0 duplicate executions.
+  - **Test 2 (High-Throughput Ingestion):** 100 jobs drained across 5 parallel workers $\to$ exactly 100 executions, 0 duplicates, 0 dropped jobs.
+  - **Test 3 (Concurrency Invariant):** 5 parallel workers under heavy queue pressure $\to$ active running jobs **strictly $\le 3$** at all times.
+  - **Test 4 (Worker Crash & Lease Fencing):** Partitioned/crashed worker loses lease $\to$ recovered by Reaper $\to$ claimed by healthy worker $\to$ zombie worker finalization safely fenced and rejected.
+  - **Test 5 (Concurrent Idempotency Burst):** 100 simultaneous async POST requests with the same key $\to$ exactly 1 job created, all 100 return the identical job ID.
+  - **Test 6 (Scheduler High-Availability Race):** 3 concurrent scheduler daemon replicas evaluating due cron jobs $\to$ exactly 1 child job dispatched.
 - **📊 Comprehensive Observability & Telemetry Engine**:
   - **System Level:** Total jobs, live Throughput (jobs/sec), Success rate %, Failure rate %, Retry rate %, DLQ rate %.
   - **Queue Level:** Real-time Queue depth, Oldest job waiting age, Average wait time (ms), Running jobs vs Limit, Concurrency utilization gauge bars (0-100%), and Throughput (ops/s).

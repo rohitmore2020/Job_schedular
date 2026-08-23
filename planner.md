@@ -367,6 +367,14 @@ To prevent duplicate job creation when multiple scheduler daemon replicas evalua
 3. **Fleet Health:** Online/busy/idle node tracking, live heartbeat age (seconds), cumulative execution counts, and node failure telemetry.
 4. **Per-Job Lifecycle Latency Breakdown:** Exact queue wait latency (ms), execution duration (ms), retry attempt counts, and total lifecycle duration.
 
+### 5.11 Distributed Race Condition & Stress Verification Harness
+1. **Test 1 — Mutual Exclusion (2 Workers, 1 Job):** Exactly 1 worker claims and executes the job.
+2. **Test 2 — High-Throughput (100 Jobs, 5 Workers):** Exactly 100 executions with 0 duplicate claims or lost jobs.
+3. **Test 3 — Concurrency Invariant ($\le 3$):** Strict serialization under pressure verified via continuous 5ms sampling.
+4. **Test 4 — Worker Crash & Split-Brain Fencing:** Stale finalization attempts by unpaused/partitioned zombie workers are rejected.
+5. **Test 5 — Concurrent Idempotency Burst:** 100 simultaneous requests resolve to 1 row and identical responses.
+6. **Test 6 — HA Scheduler Race:** 3 concurrent scheduler replicas evaluate cron without double-dispatching occurrences.
+
 ---
 
 ## 6. API Design & Surface Specification

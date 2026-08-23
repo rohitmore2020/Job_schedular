@@ -141,6 +141,15 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - **Worker Fleet Health:** Online/busy/idle node tracking, live heartbeat age (seconds), cumulative execution counts, and node failure telemetry.
 - **Per-Job Lifecycle Latency Breakdown:** Exact queue wait time (ms), task execution duration (ms), retry attempt counters, and total lifecycle duration.
 
+### 2.14 Distributed Race Condition & Stress Verification Harness
+- **Mutual Exclusion (2 Workers, 1 Job):** Validates PostgreSQL `FOR UPDATE SKIP LOCKED` guarantees exactly 1 worker claims and completes the job.
+- **Distributed Ingestion (100 Jobs, 5 Workers):** Verifies zero duplicate claims, 100 executions, and 0 dropped jobs under parallel fleet load.
+- **Strict Concurrency Invariant ($\text{Running} \le C$):** Asynchronous observer polls at 5ms intervals to mathematically verify active in-flight executions never violate queue concurrency caps.
+- **Worker Crash & Split-Brain Fencing:** Confirms Lease Reaper recovers orphaned jobs, issues a new `lease_token`, and aborts/kills stale finalization attempts from revived zombie workers.
+- **Concurrent Idempotency Burst:** 100 parallel asynchronous `POST` requests resolve to exactly 1 database row and return identical responses.
+- **High-Availability Cron Scheduler Race:** Multiple concurrent Cron Dispatcher daemon replicas evaluate due schedules with zero duplicate child job occurrences.
+
+
 
 
 
