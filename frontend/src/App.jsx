@@ -4,6 +4,7 @@ import Header from './components/Header';
 import OverviewView from './components/OverviewView';
 import QueuesView from './components/QueuesView';
 import JobsView from './components/JobsView';
+import BatchesView from './components/BatchesView';
 import DLQView from './components/DLQView';
 import SchedulesView from './components/SchedulesView';
 import WorkersView from './components/WorkersView';
@@ -200,6 +201,10 @@ export default function App() {
               onInspectJob={(id) => setInspectJobId(id)}
               onRefresh={refreshData}
             />
+          )}
+
+          {currentTab === 'batches' && (
+            <BatchesView />
           )}
 
           {currentTab === 'dlq' && (

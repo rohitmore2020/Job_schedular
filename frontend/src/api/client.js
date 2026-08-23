@@ -86,6 +86,14 @@ export const apiClient = {
   resumeSchedule: (scheduleId) => api.post(`/schedules/${scheduleId}/resume`),
   deleteSchedule: (scheduleId) => api.delete(`/schedules/${scheduleId}`),
 
+  // Batches
+  getBatches: (params) => api.get('/batches', { params }),
+  getBatch: (batchId) => api.get(`/batches/${batchId}`),
+  getBatchJobs: (batchId, params) => api.get(`/batches/${batchId}/jobs`, { params }),
+  createBatch: (queueId, data) => api.post(`/queues/${queueId}/batches`, data),
+  cancelBatch: (batchId) => api.post(`/batches/${batchId}/cancel`),
+  retryBatch: (batchId) => api.post(`/batches/${batchId}/retry`),
+
   // Workers
   getWorkers: () => api.get('/workers'),
   getWorkerHeartbeats: (workerId) => api.get(`/workers/${workerId}/heartbeats`),

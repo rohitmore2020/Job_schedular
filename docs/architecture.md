@@ -122,5 +122,12 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - **Duplicate Prevention:** Combines with PostgreSQL's partial unique index on `(queue_id, idempotency_key)` and `ON CONFLICT DO NOTHING`.
 - **Multi-Scheduler Safety:** High-availability scheduler daemon replicas can concurrently evaluate schedules without double-dispatching occurrences.
 
+### 2.11 First-Class Batch Orchestration
+- **Model Hierarchy:** Dedicated `job_batches` coordinator with child jobs linked via `jobs.batch_id`.
+- **Parallel Dispatch:** Workers claim individual batch child jobs concurrently under ACID SKIP LOCKED primitives.
+- **Aggregated Telemetry:** Real-time counters (`total_jobs`, `completed_jobs`, `failed_jobs`, `cancelled_jobs`, `progress_percent`).
+- **Batch Control APIs:** Atomic multi-job creation (`POST /api/v1/queues/{id}/batches`), live progress inspection, batch cancellation, and retry redrive.
+
+
 
 

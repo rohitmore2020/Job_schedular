@@ -63,6 +63,9 @@ class Job(Base):
     parent_job_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
     )
+    batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     tags: Mapped[List[str]] = mapped_column(JSONB, default=list, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -96,6 +99,7 @@ class Job(Base):
 
     # Relationships
     queue: Mapped["Queue"] = relationship("Queue", back_populates="jobs")
+    batch: Mapped[Optional["JobBatch"]] = relationship("JobBatch", back_populates="jobs")
     executions: Mapped[List["JobExecution"]] = relationship(
         "JobExecution", back_populates="job", cascade="all, delete-orphan", order_by="JobExecution.attempt_number"
     )

@@ -15,6 +15,7 @@ from backend.app.models.job import Job, JobExecution, DLQEntry
 from backend.app.models.schedule import ScheduledJob
 from backend.app.models.worker import Worker, WorkerHeartbeat
 from backend.app.models.idempotency import IdempotencyRecord
+from backend.app.models.batch import JobBatch, BatchStatus
 
 __all__ = [
     "Base",
@@ -23,6 +24,7 @@ __all__ = [
     "RetryStrategy",
     "WorkerStatus",
     "ExecutionStatus",
+    "BatchStatus",
     "Organization",
     "User",
     "Project",
@@ -36,4 +38,5 @@ __all__ = [
     "Worker",
     "WorkerHeartbeat",
     "IdempotencyRecord",
+    "JobBatch",
 ]

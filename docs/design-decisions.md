@@ -196,5 +196,38 @@ unique key: cron:17:2026-08-23T18:00:00+00:00
 
 Coupled with PostgreSQL's partial unique index (`idx_jobs_idempotency` ON `(queue_id, idempotency_key)`), the database enforces that **only one occurrence can ever be created for that scheduled tick**. Any concurrent replica attempting to insert the same tick triggers `ON CONFLICT DO NOTHING` and gracefully skips creation without errors.
 
+---
+
+## 10. First-Class Batch Orchestration Subsystem
+
+### What is a Batch?
+Rather than an opaque single job whose JSON payload contains an array of tasks, a **Batch** is a dedicated first-class coordinator entity:
+
+```
+JobBatch (batch_id: UUID)
+ ├── total_jobs: 100
+ ├── completed_jobs: 75
+ ├── failed_jobs: 3
+ ├── pending_jobs: 22
+ ├── progress_percent: 75.0%
+ └── status: "processing"
+      │
+      ├── Child Job 1 (job_id: UUID, status: "completed")
+      ├── Child Job 2 (job_id: UUID, status: "completed")
+      ├── Child Job 3 (job_id: UUID, status: "dead_letter")
+      └── Child Job N (job_id: UUID, status: "queued")
+```
+
+### Architectural Benefits
+1. **Parallel Worker Distribution:** Every child job is an individual row in PostgreSQL claimed independently by competing workers across the fleet under `FOR UPDATE SKIP LOCKED`.
+2. **Aggregated Live Progress:** The dashboard renders visual progress bars:
+   `████████████░░░░ 75% | 75/100 completed, 3 failed, 22 running`
+3. **Batch-Level Lifecycle APIs:**
+   - `POST /api/v1/queues/{queue_id}/batches` (atomic creation of $N$ jobs)
+   - `GET /api/v1/batches/{id}` (real-time progress querying)
+   - `POST /api/v1/batches/{id}/cancel` (cancels all pending/queued child jobs)
+   - `POST /api/v1/batches/{id}/retry` (re-enqueues failed/DLQ child jobs)
+
+
 
 

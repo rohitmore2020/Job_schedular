@@ -70,6 +70,7 @@ class JobResponse(BaseModel):
     lease_token: Optional[uuid.UUID] = None
     lock_expires_at: Optional[datetime] = None
     parent_job_id: Optional[uuid.UUID] = None
+    batch_id: Optional[uuid.UUID] = None
     tags: List[str]
     created_at: datetime
     updated_at: datetime

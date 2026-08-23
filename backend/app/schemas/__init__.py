@@ -47,6 +47,12 @@ from backend.app.schemas.schedule import (
     ScheduledJobUpdate,
     ScheduledJobResponse,
 )
+from backend.app.schemas.batch import (
+    BatchCreate,
+    BatchResponse,
+    BatchDetailResponse,
+    BatchListResponse,
+)
 
 __all__ = [
     "UserResponse",
@@ -83,4 +89,8 @@ __all__ = [
     "ScheduledJobCreate",
     "ScheduledJobUpdate",
     "ScheduledJobResponse",
+    "BatchCreate",
+    "BatchResponse",
+    "BatchDetailResponse",
+    "BatchListResponse",
 ]

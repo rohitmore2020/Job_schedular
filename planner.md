@@ -348,6 +348,12 @@ To prevent duplicate job creation when multiple scheduler daemon replicas evalua
 2. Uses PostgreSQL `ON CONFLICT (queue_id, idempotency_key) DO NOTHING`.
 3. Guarantees exactly one job is created for each scheduled interval, regardless of how many scheduler replicas run concurrently.
 
+### 5.8 First-Class Batch Orchestration
+1. **Coordinator Entity:** `JobBatch` (`id`, `project_id`, `queue_id`, `name`, `status`, `total_jobs`, `completed_jobs`, `failed_jobs`, `cancelled_jobs`).
+2. **Child Jobs Linkage:** `jobs.batch_id` foreign key.
+3. **Live Progress Computation:** Dynamic calculation of `progress_percent`, `pending_jobs`, and completion states (`COMPLETED`, `PARTIALLY_FAILED`, `FAILED`, `CANCELLED`).
+4. **Lifecycle Control:** Multi-job atomic submission, real-time progress monitoring, batch cancellation, and retry redrive.
+
 ---
 
 ## 6. API Design & Surface Specification
