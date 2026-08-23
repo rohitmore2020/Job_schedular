@@ -308,7 +308,26 @@ class JobService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Job not found or access denied",
             )
-        return JobDetailResponse.model_validate(job)
+
+        resp = JobDetailResponse.model_validate(job)
+
+        # ⏱️ Calculate Job Latency & Observability Metrics
+        if job.started_at and job.created_at:
+            resp.queue_wait_ms = max(0, int((job.started_at - job.created_at).total_seconds() * 1000))
+        elif job.executions:
+            first_exec = min(job.executions, key=lambda e: e.started_at)
+            resp.queue_wait_ms = max(0, int((first_exec.started_at - job.created_at).total_seconds() * 1000))
+
+        if job.executions:
+            resp.total_execution_time_ms = sum(e.duration_ms for e in job.executions)
+            latest_exec = max(job.executions, key=lambda e: e.attempt_number)
+            resp.execution_duration_ms = latest_exec.duration_ms
+        elif job.completed_at and job.started_at:
+            resp.execution_duration_ms = max(0, int((job.completed_at - job.started_at).total_seconds() * 1000))
+            resp.total_execution_time_ms = resp.execution_duration_ms
+
+        resp.retry_count = max(0, job.attempt_count - 1)
+        return resp
 
     @staticmethod
     async def cancel_job(db: AsyncSession, user: User, job_id: uuid.UUID) -> JobResponse:

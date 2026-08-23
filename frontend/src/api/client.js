@@ -98,7 +98,10 @@ export const apiClient = {
   cancelBatch: (batchId) => api.post(`/batches/${batchId}/cancel`),
   retryBatch: (batchId) => api.post(`/batches/${batchId}/retry`),
 
-  // Workers
+  // Workers & Fleet Telemetry
   getWorkers: () => api.get('/workers'),
   getWorkerHeartbeats: (workerId) => api.get(`/workers/${workerId}/heartbeats`),
+
+  // Telemetry & Observability
+  getTelemetry: (params) => api.get('/telemetry', { params }),
 };

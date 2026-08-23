@@ -27,5 +27,10 @@ class WorkerResponse(BaseModel):
     started_at: datetime
     last_heartbeat_at: datetime
     is_alive: bool = True
+    heartbeat_age_seconds: float = 0.0
+    jobs_processed: int = 0
+    failure_count: int = 0
+    is_busy: bool = False
+    is_idle: bool = True
 
     model_config = ConfigDict(from_attributes=True)

@@ -5,10 +5,10 @@
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-55%2F55%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-59%2F59%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, first-class batch orchestration with live aggregated progress, deterministic logical keys for race-free cron dispatching, at-least-once execution semantics with side-effect idempotency, hierarchical RBAC (Owner/Admin, Developer/Member, Viewer), worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
+> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, first-class batch orchestration with live aggregated progress, deterministic logical keys for race-free cron dispatching, at-least-once execution semantics with side-effect idempotency, hierarchical RBAC (Owner/Admin, Developer/Member, Viewer), end-to-end full-stack observability (System KPIs, Queue Depths & Wait Times, Worker Fleet Liveness & Heartbeats, Per-Job Latency Breakdowns), worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
 
 ---
 
@@ -47,6 +47,7 @@ flowchart TB
     subgraph BackendCluster["FastAPI Backend Cluster (:8000)"]
         API["FastAPI App (REST Endpoints)"]
         AuthModule["JWT & RBAC Security Engine (Admin/Dev/Viewer)"]
+        TelemetryService["📊 Telemetry & Observability Engine"]
         WSManager["WebSocket Connection Manager"]
         JobIngest["Job Ingestion & Batch Engine"]
     end
@@ -83,6 +84,7 @@ flowchart TB
     Nginx --> API
 
     API --> AuthModule
+    API --> TelemetryService
     API --> WSManager
     API --> JobIngest
     JobIngest --> Postgres
@@ -100,6 +102,11 @@ flowchart TB
 
 ## ✨ Key Engineering Features
 
+- **📊 Comprehensive Observability & Telemetry Engine**:
+  - **System Level:** Total jobs, live Throughput (jobs/sec), Success rate %, Failure rate %, Retry rate %, DLQ rate %.
+  - **Queue Level:** Real-time Queue depth, Oldest job waiting age, Average wait time (ms), Running jobs vs Limit, Concurrency utilization gauge bars (0-100%), and Throughput (ops/s).
+  - **Worker Fleet Level:** Online, Busy, and Idle node counters, Heartbeat age tracking (seconds), cumulative processed count, and failure count.
+  - **Job Latency Breakdown:** Queue wait latency (ms), task execution duration (ms), retry attempt counters, and total lifecycle duration.
 - **🔒 Atomic Claiming & Queue Serialization**: Queue row-level locking + `FOR UPDATE SKIP LOCKED` guarantees strict concurrency adherence without double execution.
 - **🛡️ Hierarchical RBAC & Multi-Tenant Isolation**: 3-tier Role-Based Access Control (`Owner/Admin`, `Developer/Member`, `Viewer`) with strict cross-organization cryptographic and tenant barriers.
 - **📦 First-Class Batch Orchestration**: Coordinator model (`job_batches`) tracks child jobs with live visual progress (`75/100 completed, 3 failed`), batch-wide cancellation, and 1-click retry.

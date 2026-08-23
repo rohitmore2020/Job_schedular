@@ -102,30 +102,64 @@ export default function QueuesView({ queues, selectedProject, onRefresh }) {
                 </div>
 
                 {/* Queue Specs */}
-                <div className="grid grid-cols-2 gap-3 mb-5 text-xs">
-                  <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                    <span className="text-slate-400 text-[11px] block">Queue Priority</span>
-                    <span className="font-mono font-bold text-slate-200 text-sm">P{q.priority}</span>
+                <div className="grid grid-cols-2 gap-2.5 mb-3.5 text-xs">
+                  <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] block">Queue Priority</span>
+                    <span className="font-mono font-bold text-slate-200 text-xs">P{q.priority}</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                    <span className="text-slate-400 text-[11px] block">Concurrency Limit</span>
-                    <span className="font-mono font-bold text-sky-400 text-sm">{q.concurrency_limit} max</span>
+                  <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] block">Concurrency Cap</span>
+                    <span className="font-mono font-bold text-sky-400 text-xs">{q.concurrency_limit} max</span>
                   </div>
                 </div>
 
-                {/* Retry Policy Summary */}
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 mb-5 text-xs">
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-[11px] text-slate-400">Retry Strategy:</span>
-                    <span className="font-mono uppercase text-sky-300 font-semibold">
-                      {q.retry_policy?.strategy || 'exponential'}
+                {/* Observability & Saturation Metrics */}
+                <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 mb-3.5 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 text-[11px]">Queue Depth:</span>
+                    <span className="font-mono font-bold text-sky-300">
+                      {q.stats?.queue_depth || 0} jobs
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-300 mt-1 text-[11px]">
-                    <span className="text-slate-400">Interval / Multiplier:</span>
-                    <span className="font-mono text-slate-300">
-                      {q.retry_policy?.initial_interval_sec || 5}s (×{q.retry_policy?.backoff_multiplier || 2})
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 text-[11px]">Oldest Job Age:</span>
+                    <span className="font-mono text-slate-200">
+                      {q.stats?.oldest_job_age_seconds !== null && q.stats?.oldest_job_age_seconds !== undefined
+                        ? `${q.stats.oldest_job_age_seconds}s`
+                        : 'none'}
                     </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 text-[11px]">Average Wait Time:</span>
+                    <span className="font-mono text-slate-200">
+                      {q.stats?.average_wait_time_ms !== null && q.stats?.average_wait_time_ms !== undefined
+                        ? `${q.stats.average_wait_time_ms} ms`
+                        : '—'}
+                    </span>
+                  </div>
+
+                  {/* Concurrency Utilization Bar */}
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-slate-400">Concurrency Utilization:</span>
+                      <span className="font-mono font-bold text-slate-200">
+                        {q.stats?.running || 0} / {q.concurrency_limit} ({q.stats?.concurrency_utilization_percent || 0}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          (q.stats?.concurrency_utilization_percent || 0) > 80
+                            ? 'bg-rose-500'
+                            : (q.stats?.concurrency_utilization_percent || 0) > 50
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400'
+                        }`}
+                        style={{ width: `${Math.min(100, q.stats?.concurrency_utilization_percent || 0)}%` }}
+                      ></div>
+                    </div>
                   </div>
                 </div>
 

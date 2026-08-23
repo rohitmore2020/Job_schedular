@@ -198,6 +198,7 @@ export default function App() {
               jobs={jobs}
               workers={workers}
               dlqCount={dlqCount}
+              selectedProject={selectedProject}
               onInspectJob={(id) => setInspectJobId(id)}
             />
           )}

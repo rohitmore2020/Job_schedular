@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Terminal, Clock, Cpu, RotateCcw, XCircle, CheckCircle2, AlertOctagon, Zap } from 'lucide-react';
+import {
+  X,
+  Terminal,
+  Clock,
+  Cpu,
+  RotateCcw,
+  XCircle,
+  CheckCircle2,
+  AlertOctagon,
+  Zap,
+  Hourglass,
+  Timer,
+  Hash,
+} from 'lucide-react';
 import { apiClient } from '../api/client';
 
 export default function JobDetailDrawer({ jobId, onClose, onRefresh }) {
@@ -128,16 +141,63 @@ export default function JobDetailDrawer({ jobId, onClose, onRefresh }) {
             <div className="py-12 text-center text-slate-400">Loading execution audit telemetry...</div>
           ) : (
             <>
+              {/* ⏱️ 4 KEY PER-JOB OBSERVABILITY LATENCY PILLS */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase font-semibold">
+                    <Hourglass className="w-3 h-3 text-sky-400" />
+                    <span>Queue Wait</span>
+                  </div>
+                  <p className="text-base font-bold text-sky-300 font-mono mt-1">
+                    {job?.queue_wait_ms !== null && job?.queue_wait_ms !== undefined ? `${job.queue_wait_ms} ms` : '—'}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Dispatch delay</span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase font-semibold">
+                    <Timer className="w-3 h-3 text-emerald-400" />
+                    <span>Exec Duration</span>
+                  </div>
+                  <p className="text-base font-bold text-emerald-300 font-mono mt-1">
+                    {job?.execution_duration_ms !== null && job?.execution_duration_ms !== undefined ? `${job.execution_duration_ms} ms` : 'In progress'}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Run latency</span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase font-semibold">
+                    <Hash className="w-3 h-3 text-amber-400" />
+                    <span>Retry Count</span>
+                  </div>
+                  <p className="text-base font-bold text-amber-300 font-mono mt-1">
+                    {job?.retry_count || 0}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Total attempts: {job?.attempt_count}</span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase font-semibold">
+                    <Clock className="w-3 h-3 text-purple-400" />
+                    <span>Total Time</span>
+                  </div>
+                  <p className="text-base font-bold text-purple-300 font-mono mt-1">
+                    {job?.total_execution_time_ms ? `${job.total_execution_time_ms} ms` : '—'}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Cumulative runtime</span>
+                </div>
+              </div>
+
               {/* Metadata Grid */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 text-[11px] block">Priority</span>
+                  <span className="text-slate-400 text-[11px] block">Queue Priority</span>
                   <span className="font-mono font-bold text-slate-200 text-sm">P{job?.priority}</span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 text-[11px] block">Attempt Count</span>
+                  <span className="text-slate-400 text-[11px] block">Max Retries Allowed</span>
                   <span className="font-mono font-bold text-sky-400 text-sm">
-                    {job?.attempt_count} / {job?.max_retries}
+                    {job?.max_retries} max
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">

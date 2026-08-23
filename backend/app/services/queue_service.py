@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from sqlalchemy import select, func, case
 from sqlalchemy.orm import selectinload
@@ -18,8 +19,11 @@ from backend.app.services.project_service import ProjectService
 
 class QueueService:
     @staticmethod
-    async def get_queue_stats(db: AsyncSession, queue_id: uuid.UUID) -> QueueStats:
-        """Compute live job counts by status for a queue."""
+    async def get_queue_stats(
+        db: AsyncSession, queue_id: uuid.UUID, concurrency_limit: int = 10
+    ) -> QueueStats:
+        """Compute live job counts, latency, queue depth, and utilization for a queue."""
+        now_utc = datetime.now(timezone.utc)
         stmt = select(
             func.count(case((Job.status == JobStatus.QUEUED, 1))).label("queued"),
             func.count(case((Job.status == JobStatus.RUNNING, 1))).label("running"),
@@ -27,18 +31,55 @@ class QueueService:
             func.count(case((Job.status == JobStatus.FAILED, 1))).label("failed"),
             func.count(case((Job.status == JobStatus.DEAD_LETTER, 1))).label("dead_letter"),
             func.count(Job.id).label("total"),
+            func.min(case((Job.status == JobStatus.QUEUED, Job.created_at))).label("oldest_created_at"),
+            func.count(case(((Job.status == JobStatus.COMPLETED) & (Job.completed_at >= now_utc - timedelta(seconds=60)), 1))).label("recent_completions"),
         ).where(Job.queue_id == queue_id)
 
         result = await db.execute(stmt)
         row = result.fetchone()
+
+        # Average wait time from created_at to started_at for completed/running jobs in this queue
+        wait_stmt = select(
+            func.avg(
+                func.extract("epoch", Job.started_at) - func.extract("epoch", Job.created_at)
+            )
+        ).where(Job.queue_id == queue_id, Job.started_at.isnot(None))
+        wait_res = await db.execute(wait_stmt)
+        avg_wait_sec = wait_res.scalar()
+
         if row:
+            queued = row[0] or 0
+            running = row[1] or 0
+            completed = row[2] or 0
+            failed = row[3] or 0
+            dead_letter = row[4] or 0
+            total = row[5] or 0
+            oldest_created = row[6]
+            recent_completed = row[7] or 0
+
+            oldest_age_sec = None
+            if oldest_created:
+                oldest_age_sec = max(0.0, round((now_utc - oldest_created).total_seconds(), 2))
+
+            avg_wait_ms = None
+            if avg_wait_sec is not None and avg_wait_sec >= 0:
+                avg_wait_ms = round(float(avg_wait_sec) * 1000.0, 1)
+
+            utilization = round((running / max(1, concurrency_limit)) * 100.0, 1)
+            throughput_min = float(recent_completed)
+
             return QueueStats(
-                queued=row[0] or 0,
-                running=row[1] or 0,
-                completed=row[2] or 0,
-                failed=row[3] or 0,
-                dead_letter=row[4] or 0,
-                total=row[5] or 0,
+                queued=queued,
+                running=running,
+                completed=completed,
+                failed=failed,
+                dead_letter=dead_letter,
+                total=total,
+                queue_depth=queued,
+                oldest_job_age_seconds=oldest_age_sec,
+                average_wait_time_ms=avg_wait_ms,
+                concurrency_utilization_percent=min(100.0, utilization),
+                throughput_jobs_per_min=throughput_min,
             )
         return QueueStats()
 
@@ -59,7 +100,7 @@ class QueueService:
 
         responses = []
         for q in queues:
-            stats = await QueueService.get_queue_stats(db, q.id)
+            stats = await QueueService.get_queue_stats(db, q.id, concurrency_limit=q.concurrency_limit)
             resp = QueueResponse.model_validate(q)
             resp.stats = stats
             responses.append(resp)

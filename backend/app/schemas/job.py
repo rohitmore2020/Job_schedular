@@ -81,6 +81,10 @@ class JobResponse(BaseModel):
 class JobDetailResponse(JobResponse):
     executions: List[JobExecutionResponse] = []
     dlq_entry: Optional[DLQEntryResponse] = None
+    queue_wait_ms: Optional[int] = None
+    execution_duration_ms: Optional[int] = None
+    retry_count: int = 0
+    total_execution_time_ms: int = 0
 
 
 class JobListResponse(BaseModel):

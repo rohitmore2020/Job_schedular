@@ -23,7 +23,7 @@ async def get_queue(
     current_user: User = Depends(get_current_user),
 ):
     queue = await QueueService.get_queue(db, current_user, queue_id)
-    stats = await QueueService.get_queue_stats(db, queue_id)
+    stats = await QueueService.get_queue_stats(db, queue_id, concurrency_limit=queue.concurrency_limit)
     resp = QueueResponse.model_validate(queue)
     resp.stats = stats
     return resp

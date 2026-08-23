@@ -361,6 +361,12 @@ To prevent duplicate job creation when multiple scheduler daemon replicas evalua
    - `VIEWER`: Strictly read-only access. Mutation endpoints return `403 Forbidden`.
 2. **Cross-Tenant Security Barrier:** All resource queries are strictly scoped to the authenticated user's `org_id`. Requests targeting unauthorized UUIDs from other organizations fail with `404 Not Found`.
 
+### 5.10 Full-Stack Observability & Real-Time Telemetry Engine
+1. **System KPIs:** Live jobs/sec, success rate %, failure rate %, retry backoff rate %, DLQ rate %.
+2. **Queue Saturation:** Queue depth, oldest job age, average wait duration from ingestion to claim (ms), concurrency utilization %, throughput ops/sec.
+3. **Fleet Health:** Online/busy/idle node tracking, live heartbeat age (seconds), cumulative execution counts, and node failure telemetry.
+4. **Per-Job Lifecycle Latency Breakdown:** Exact queue wait latency (ms), execution duration (ms), retry attempt counts, and total lifecycle duration.
+
 ---
 
 ## 6. API Design & Surface Specification

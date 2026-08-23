@@ -135,6 +135,13 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
   - `Viewer`: Read-only telemetry and monitoring. All mutation endpoints return `403 Forbidden`.
 - **Cross-Tenant Isolation Barrier:** Every SQL query joins against `Project` and validates `Project.org_id == current_user.org_id`. Requests targeting unauthorized foreign UUIDs return `404 Not Found` without information leakage.
 
+### 2.13 End-to-End Multi-Tier Observability & Latency Telemetry
+- **System KPIs:** Live jobs/sec throughput, real-time success rate %, failure rate %, retry backoff rate %, and DLQ escalation rate %.
+- **Queue Saturation:** Instantaneous queue depth, oldest job wait age, average latency from creation to execution start (ms), and concurrency utilization percentage gauge (0-100%).
+- **Worker Fleet Health:** Online/busy/idle node tracking, live heartbeat age (seconds), cumulative execution counts, and node failure telemetry.
+- **Per-Job Lifecycle Latency Breakdown:** Exact queue wait time (ms), task execution duration (ms), retry attempt counters, and total lifecycle duration.
+
+
 
 
 

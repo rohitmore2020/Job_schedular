@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, HardDrive, Activity, Radio, CheckCircle, Clock } from 'lucide-react';
+import { Cpu, HardDrive, Activity, Radio, CheckCircle, Clock, AlertTriangle, PlayCircle, Server } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiClient } from '../api/client';
 
@@ -41,11 +41,60 @@ export default function WorkersView({ workers, onRefresh }) {
     }
   };
 
+  const onlineCount = workers?.filter((w) => w.is_alive).length || 0;
+  const busyCount = workers?.filter((w) => w.is_alive && w.current_active_jobs > 0).length || 0;
+  const idleCount = workers?.filter((w) => w.is_alive && w.current_active_jobs === 0).length || 0;
+  const totalJobsProcessed = workers?.reduce((acc, w) => acc + (w.jobs_processed || 0), 0) || 0;
+  const totalFailures = workers?.reduce((acc, w) => acc + (w.failure_count || 0), 0) || 0;
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-white tracking-tight">Distributed Worker Nodes Fleet</h2>
-        <p className="text-xs text-slate-400">Live CPU, memory telemetry, concurrency utilization, and node liveness.</p>
+        <h2 className="text-lg font-bold text-white tracking-tight">Distributed Worker Fleet Observability</h2>
+        <p className="text-xs text-slate-400">Live CPU, memory telemetry, heartbeat age, and failure rates per node.</p>
+      </div>
+
+      {/* Fleet Top KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+        <div className="glass-panel p-3.5">
+          <span className="text-[10px] font-bold uppercase text-slate-400 block">Workers Online</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-lg font-bold text-white font-mono">{onlineCount}</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-3.5">
+          <span className="text-[10px] font-bold uppercase text-slate-400 block">Workers Busy</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+            <span className="text-lg font-bold text-indigo-400 font-mono">{busyCount}</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-3.5">
+          <span className="text-[10px] font-bold uppercase text-slate-400 block">Workers Idle</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+            <span className="text-lg font-bold text-slate-300 font-mono">{idleCount}</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-3.5">
+          <span className="text-[10px] font-bold uppercase text-slate-400 block">Jobs Processed</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-lg font-bold text-emerald-400 font-mono">{totalJobsProcessed}</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-3.5">
+          <span className="text-[10px] font-bold uppercase text-slate-400 block">Failure Count</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+            <span className="text-lg font-bold text-rose-400 font-mono">{totalFailures}</span>
+          </div>
+        </div>
       </div>
 
       {/* Workers Nodes Grid */}
@@ -81,7 +130,7 @@ export default function WorkersView({ workers, onRefresh }) {
                         : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                     }`}
                   >
-                    {w.is_alive ? 'ALIVE' : 'DEAD'}
+                    {w.is_alive ? (w.current_active_jobs > 0 ? 'BUSY' : 'IDLE') : 'DEAD'}
                   </span>
                 </div>
 
@@ -97,12 +146,20 @@ export default function WorkersView({ workers, onRefresh }) {
                     <span className="font-mono text-sky-400 font-semibold">{w.concurrency_limit} slots</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Active In-flight Jobs:</span>
+                    <span>Active In-flight:</span>
                     <span className="font-mono text-indigo-400 font-semibold">{w.current_active_jobs} jobs</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Jobs Processed / Failed:</span>
+                    <span className="font-mono text-slate-300">
+                      <strong className="text-emerald-400">{w.jobs_processed || 0}</strong> / <strong className="text-rose-400">{w.failure_count || 0}</strong>
+                    </span>
+                  </div>
                   <div className="flex justify-between text-[11px]">
-                    <span>Last Heartbeat:</span>
-                    <span className="text-slate-400">{new Date(w.last_heartbeat_at).toLocaleTimeString()}</span>
+                    <span>Heartbeat Age:</span>
+                    <span className="font-mono font-semibold text-slate-300">
+                      {w.heartbeat_age_seconds !== undefined ? `${w.heartbeat_age_seconds}s ago` : 'just now'}
+                    </span>
                   </div>
                 </div>
 

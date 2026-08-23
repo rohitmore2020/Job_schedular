@@ -60,6 +60,11 @@ class QueueStats(BaseModel):
     failed: int = 0
     dead_letter: int = 0
     total: int = 0
+    queue_depth: int = 0
+    oldest_job_age_seconds: Optional[float] = None
+    average_wait_time_ms: Optional[float] = None
+    concurrency_utilization_percent: float = 0.0
+    throughput_jobs_per_min: float = 0.0
 
 
 class QueueResponse(QueueBase):
