@@ -11,6 +11,7 @@ import WorkersView from './components/WorkersView';
 import SubmitJobModal from './components/SubmitJobModal';
 import JobDetailDrawer from './components/JobDetailDrawer';
 import AuthModal from './components/AuthModal';
+import ProjectModal from './components/ProjectModal';
 import { apiClient } from './api/client';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
 
   // Modals & Drawers
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [inspectJobId, setInspectJobId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
@@ -138,6 +140,21 @@ export default function App() {
     }
   };
 
+  const handleProjectCreated = (newProject) => {
+    setProjects((prev) => [newProject, ...prev]);
+    setSelectedProject(newProject);
+    setSelectedQueueId(null);
+  };
+
+  const handleProjectUpdated = (updatedProject) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === updatedProject.id ? { ...p, ...updatedProject } : p))
+    );
+    setSelectedProject((prev) =>
+      prev?.id === updatedProject.id ? { ...prev, ...updatedProject } : prev
+    );
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -170,6 +187,7 @@ export default function App() {
           wsConnected={wsConnected}
           onRefresh={refreshData}
           loading={loading}
+          openProjectModal={() => setShowProjectModal(true)}
         />
 
         {/* Scrollable View Container */}
@@ -241,6 +259,17 @@ export default function App() {
         queues={queues}
         selectedQueueId={selectedQueueId}
         onJobSubmitted={refreshData}
+      />
+
+      {/* Project Management & Multi-Tenancy Modal */}
+      <ProjectModal
+        isOpen={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        user={user}
+        projects={projects}
+        selectedProject={selectedProject}
+        onProjectCreated={handleProjectCreated}
+        onProjectUpdated={handleProjectUpdated}
       />
 
       {/* Job Detail & Log Inspector Drawer */}

@@ -1,11 +1,27 @@
 import React from 'react';
-import { RefreshCw, Radio, CheckCircle2, ShieldCheck, Database } from 'lucide-react';
+import {
+  RefreshCw,
+  Database,
+  Plus,
+  Settings2,
+  Boxes,
+} from 'lucide-react';
 
-export default function Header({ currentTab, projects, selectedProject, setSelectedProject, wsConnected, onRefresh, loading }) {
+export default function Header({
+  currentTab,
+  projects,
+  selectedProject,
+  setSelectedProject,
+  wsConnected,
+  onRefresh,
+  loading,
+  openProjectModal,
+}) {
   const titles = {
     overview: 'System Overview & Telemetry',
     queues: 'Queue Management & Concurrency Limits',
     jobs: 'Job Ingestion & Live Lifecycle',
+    batches: 'Batch Jobs & Orchestration',
     dlq: 'Dead Letter Queue (DLQ) & Redrive',
     schedules: 'Recurring Cron Dispatcher',
     workers: 'Distributed Worker Nodes Fleet',
@@ -19,10 +35,10 @@ export default function Header({ currentTab, projects, selectedProject, setSelec
         <h1 className="text-sm font-semibold text-slate-100">{titles[currentTab] || 'Dashboard'}</h1>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Project Selector */}
-        {projects && projects.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+      <div className="flex items-center gap-3">
+        {/* Project Selector & Management Group */}
+        <div className="flex items-center rounded-lg bg-slate-900/90 border border-slate-800 p-1 text-xs">
+          <div className="flex items-center gap-1.5 px-2 text-slate-300">
             <Database className="w-3.5 h-3.5 text-sky-400" />
             <select
               value={selectedProject?.id || ''}
@@ -30,16 +46,36 @@ export default function Header({ currentTab, projects, selectedProject, setSelec
                 const p = projects.find((proj) => proj.id === e.target.value);
                 if (p) setSelectedProject(p);
               }}
-              className="bg-transparent text-slate-200 outline-none cursor-pointer text-xs"
+              className="bg-transparent text-slate-200 outline-none cursor-pointer text-xs font-medium pr-1"
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
-                  {p.name}
+                  {p.name} {p.queues_count !== undefined ? `(${p.queues_count} queues)` : ''}
                 </option>
               ))}
             </select>
           </div>
-        )}
+
+          <div className="h-4 w-[1px] bg-slate-800 mx-1" />
+
+          {/* Edit / Rename Active Project */}
+          <button
+            onClick={openProjectModal}
+            title="Project Settings & Renaming"
+            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-400 transition-colors"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Quick Create Project */}
+          <button
+            onClick={openProjectModal}
+            title="Create New Project"
+            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {/* Live Stream Beacon */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs">
@@ -54,7 +90,7 @@ export default function Header({ currentTab, projects, selectedProject, setSelec
             ></span>
           </span>
           <span className={`text-[11px] font-medium ${wsConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {wsConnected ? 'WebSocket Live Stream' : 'Polling Sync'}
+            {wsConnected ? 'Live Stream' : 'Polling Sync'}
           </span>
         </div>
 

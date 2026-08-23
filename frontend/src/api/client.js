@@ -53,7 +53,11 @@ export const apiClient = {
 
   // Projects & Queues
   getProjects: () => api.get('/projects'),
+  getProject: (projectId) => api.get(`/projects/${projectId}`),
   createProject: (data) => api.post('/projects', data),
+  updateProject: (projectId, data) => api.put(`/projects/${projectId}`, data),
+  getProjectApiKeys: (projectId) => api.get(`/projects/${projectId}/api-keys`),
+  createProjectApiKey: (projectId, data) => api.post(`/projects/${projectId}/api-keys`, data),
   getQueues: (projectId) => api.get(`/projects/${projectId}/queues`),
   createQueue: (projectId, data) => api.post(`/projects/${projectId}/queues`, data),
   pauseQueue: (queueId) => api.post(`/queues/${queueId}/pause`),
