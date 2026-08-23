@@ -90,6 +90,78 @@ async def test_cron_dispatcher_evaluates_and_enqueues_child_job(db_session, queu
     await db_session.refresh(schedule)
     assert schedule.next_run_at > now_utc
     assert schedule.total_runs_count == 1
+    assert child_job.idempotency_key == f"cron:{schedule.id}:{schedule.last_run_at.isoformat()}"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_schedulers_duplicate_cron_prevention(db_session, queue_fixture):
+    """
+    CRITICAL DISTRIBUTED CRON TEST:
+    When two scheduler replicas (Scheduler A & Scheduler B) concurrently scan
+    the same due schedule, verify that:
+    1. Both generate the unique logical execution key `cron:<schedule_id>:<scheduled_for>`.
+    2. Only ONE job execution is created in PostgreSQL (zero duplicates).
+    3. Total runs count increments exactly once.
+    4. Next fire time is computed cleanly without drift.
+    """
+    import asyncio
+    from backend.app.core.database import AsyncSessionLocal
+
+    queue = queue_fixture
+    now_utc = datetime.now(timezone.utc)
+    scheduled_time = now_utc - timedelta(minutes=5)
+
+    # Create due schedule
+    schedule = ScheduledJob(
+        project_id=queue.project_id,
+        queue_id=queue.id,
+        name="daily_billing_summary",
+        cron_expression="0 * * * *",
+        payload={"action": "generate_invoices"},
+        priority=80,
+        is_active=True,
+        next_run_at=scheduled_time,
+    )
+    db_session.add(schedule)
+    await db_session.commit()
+    schedule_id = schedule.id
+
+    dispatcher_a = CronDispatcher()
+    dispatcher_b = CronDispatcher()
+
+    # Run two scheduler passes simulating concurrent replicas
+    async def run_scheduler(dispatcher):
+        async with AsyncSessionLocal() as session:
+            return await dispatcher.dispatch_due_schedules(session, schedule_id=schedule_id)
+
+    results = await asyncio.gather(
+        run_scheduler(dispatcher_a),
+        run_scheduler(dispatcher_b),
+    )
+
+    # Total dispatched jobs across both replicas must be exactly 1
+    total_dispatched = sum(results)
+    assert total_dispatched == 1
+
+    # Query jobs table to verify exactly 1 job was created with the deterministic logical key
+    expected_idempotency_key = f"cron:{schedule_id}:{scheduled_time.isoformat()}"
+    job_stmt = select(Job).where(Job.queue_id == queue.id)
+    job_res = await db_session.execute(job_stmt)
+    jobs = job_res.scalars().all()
+
+    # Assert exactly 1 job exists in database
+    assert len(jobs) == 1
+    created_job = jobs[0]
+    assert created_job.idempotency_key == expected_idempotency_key
+    assert created_job.name == "daily_billing_summary"
+    assert created_job.status == JobStatus.QUEUED
+
+    # Verify schedule state
+    await db_session.refresh(schedule)
+    assert schedule.total_runs_count == 1
+    assert schedule.last_run_at == scheduled_time
+    assert schedule.next_run_at > scheduled_time
+
 
 
 @pytest.mark.asyncio

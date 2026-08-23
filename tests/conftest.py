@@ -7,6 +7,7 @@ from sqlalchemy.pool import NullPool
 from backend.app.main import app
 from backend.app.core.config import settings
 from backend.app.core.database import get_db
+import backend.app.core.database as db_mod
 
 # Test Engine with NullPool to avoid loop-sharing issues across tests
 test_engine = create_async_engine(
@@ -22,6 +23,9 @@ TestSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+# Ensure all daemons (worker, reaper, cron) instantiated during tests use NullPool session factory
+db_mod.AsyncSessionLocal = TestSessionLocal
 
 
 @pytest_asyncio.fixture

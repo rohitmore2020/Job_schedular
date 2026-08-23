@@ -341,6 +341,13 @@ To prevent zombie workers (e.g. unpausing from an extended GC pause or network p
    `WHERE id = :job_id AND lease_token = :held_lease_token AND status = 'running'`
 3. If the lease was reclaimed by the Reaper and assigned to another worker, the zombie worker's update matches 0 rows and is safely aborted (`ExecutionStatus.KILLED`).
 
+### 5.7 Scheduled & Recurring Jobs: Deterministic Execution Keys
+To prevent duplicate job creation when multiple scheduler daemon replicas evaluate due cron schedules:
+1. Every occurrence receives a deterministic logical idempotency key:
+   `idempotency_key = "cron:<schedule_id>:<scheduled_for_iso>"`
+2. Uses PostgreSQL `ON CONFLICT (queue_id, idempotency_key) DO NOTHING`.
+3. Guarantees exactly one job is created for each scheduled interval, regardless of how many scheduler replicas run concurrently.
+
 ---
 
 ## 6. API Design & Surface Specification

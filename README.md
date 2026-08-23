@@ -5,10 +5,10 @@
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-46%2F46%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-47%2F47%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, at-least-once execution semantics with side-effect idempotency, worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
+> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, deterministic logical keys for race-free cron dispatching, at-least-once execution semantics with side-effect idempotency, worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
 
 ---
 
@@ -99,6 +99,7 @@ flowchart TB
 
 - **🔒 Atomic Claiming & Queue Serialization**: Queue row-level locking + `FOR UPDATE SKIP LOCKED` guarantees strict concurrency adherence without double execution.
 - **🛡️ Lease Fencing Tokens**: Monotonic `lease_token` (UUID) validation on every state transition eliminates split-brain corruption from partitioned or unpaused zombie workers.
+- **⏰ Race-Free Distributed Cron**: Deterministic `cron:<schedule_id>:<scheduled_for>` execution keys prevent duplicate recurring occurrences across multi-scheduler replicas.
 - **🛡️ At-Least-Once Execution & Side-Effect Idempotency**: Stamped `execution_id` and attempt tracking via `ExecutionContext` paired with database-backed `idempotency_records` to safeguard third-party external side-effects across retries.
 - **⚡ Partial B-Tree Indexes**: Sub-millisecond polling lookups even with 10M+ completed jobs.
 - **🔄 Worker Heartbeat Leases & Zombie Reaper**: Recovers orphaned jobs within 10s if a worker crashes.

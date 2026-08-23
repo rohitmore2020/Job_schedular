@@ -166,4 +166,35 @@ WHERE id = :job_id
 - Worker A's finalization is rejected and aborted (`ExecutionStatus.KILLED`).
 - Worker B executes safely without interference or data corruption.
 
+---
+
+## 9. Scheduled & Recurring Jobs: Deterministic Logical Execution Keys
+
+### The Distributed Cron Race
+In high-availability deployments with multiple scheduler daemon replicas:
+```
+Scheduler Replica A               Scheduler Replica B
+        │                                  │
+        ├─── Evaluates `next_run_at <= NOW()` ───┤
+        │                                  │
+        ▼                                  ▼
+Attempt to create Job             Attempt to create Job
+        │                                  │
+        └─── Double Execution Danger! ─────┘
+```
+
+### The Solution: Deterministic Logical Execution Keys
+Every recurring job tick is stamped with a deterministic logical key derived from the schedule ID and logical execution fire time:
+$$\text{idempotency\_key} = \text{"cron:"} + \text{schedule\_id} + \text{":"} + \text{scheduled\_for.isoformat()}$$
+
+For example:
+```
+cron job #17 at 2026-08-23 18:00 UTC
+        ↓
+unique key: cron:17:2026-08-23T18:00:00+00:00
+```
+
+Coupled with PostgreSQL's partial unique index (`idx_jobs_idempotency` ON `(queue_id, idempotency_key)`), the database enforces that **only one occurrence can ever be created for that scheduled tick**. Any concurrent replica attempting to insert the same tick triggers `ON CONFLICT DO NOTHING` and gracefully skips creation without errors.
+
+
 

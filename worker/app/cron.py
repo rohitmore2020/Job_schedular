@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
 from croniter import croniter
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import AsyncSessionLocal
@@ -35,9 +37,14 @@ class CronDispatcher:
             next_dt = next_dt.replace(tzinfo=timezone.utc)
         return next_dt
 
-    async def dispatch_due_schedules(self, session: AsyncSession) -> int:
+    async def dispatch_due_schedules(
+        self, session: AsyncSession, schedule_id: Optional[uuid.UUID] = None
+    ) -> int:
         """
         Scan and enqueue jobs for all active schedules whose `next_run_at <= NOW()`.
+        Uses a unique logical execution key `cron:<schedule_id>:<scheduled_for>`
+        and PostgreSQL `ON CONFLICT DO NOTHING` to guarantee zero duplicate occurrences
+        even across concurrent scheduler replicas.
         """
         now_utc = datetime.now(timezone.utc)
 
@@ -50,6 +57,9 @@ class CronDispatcher:
             )
             .with_for_update(skip_locked=True)
         )
+        if schedule_id:
+            stmt = stmt.where(ScheduledJob.id == schedule_id)
+
         result = await session.execute(stmt)
         due_schedules = result.scalars().all()
 
@@ -58,30 +68,52 @@ class CronDispatcher:
 
         dispatched_count = 0
         for schedule in due_schedules:
-            # 1. Enqueue new Job instance
-            job = Job(
-                queue_id=schedule.queue_id,
-                name=schedule.name,
-                status=JobStatus.QUEUED,
-                priority=schedule.priority,
-                payload=schedule.payload,
-                max_retries=3,
-                run_at=now_utc,
-                tags=["cron", f"schedule:{schedule.id}"],
+            scheduled_for = schedule.next_run_at
+            # Logical execution key format: 'cron:<schedule_id>:<scheduled_for_iso>'
+            idempotency_key = f"cron:{schedule.id}:{scheduled_for.isoformat()}"
+
+            # 1. Atomic INSERT with ON CONFLICT (queue_id, idempotency_key) DO NOTHING
+            insert_stmt = (
+                pg_insert(Job)
+                .values(
+                    id=uuid.uuid4(),
+                    queue_id=schedule.queue_id,
+                    idempotency_key=idempotency_key,
+                    name=schedule.name,
+                    status=JobStatus.QUEUED,
+                    priority=schedule.priority,
+                    payload=schedule.payload,
+                    max_retries=3,
+                    run_at=scheduled_for,
+                    tags=["cron", f"schedule:{schedule.id}"],
+                    created_at=now_utc,
+                    updated_at=now_utc,
+                )
+                .on_conflict_do_nothing(
+                    index_elements=["queue_id", "idempotency_key"],
+                    index_where=text("idempotency_key IS NOT NULL"),
+                )
+                .returning(Job.id)
             )
-            session.add(job)
+            res_insert = await session.execute(insert_stmt)
+            row = res_insert.fetchone()
+
+            if row:
+                dispatched_count += 1
+                logger.info(
+                    f"⏰ [Cron] Dispatched recurring Job '{schedule.name}' (Schedule: {schedule.id}, Key: {idempotency_key})"
+                )
+            else:
+                logger.info(
+                    f"🛡️ [Cron Guard] Duplicate occurrence suppressed for Schedule '{schedule.name}' (Key: {idempotency_key})"
+                )
 
             # 2. Advance schedule next_run_at and increment run counter
-            next_fire = self.compute_next_run(schedule.cron_expression, now_utc)
-            schedule.last_run_at = now_utc
+            next_fire = self.compute_next_run(schedule.cron_expression, scheduled_for)
+            schedule.last_run_at = scheduled_for
             schedule.next_run_at = next_fire
-            schedule.total_runs_count = (schedule.total_runs_count or 0) + 1
+            schedule.total_runs_count = (schedule.total_runs_count or 0) + (1 if row else 0)
             schedule.updated_at = now_utc
-            dispatched_count += 1
-
-            logger.info(
-                f"⏰ [Cron] Dispatched recurring Job '{schedule.name}' (Schedule ID: {schedule.id}). Next fire at {next_fire.isoformat()}"
-            )
 
         await session.commit()
         return dispatched_count

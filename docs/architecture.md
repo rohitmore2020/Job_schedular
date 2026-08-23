@@ -117,4 +117,10 @@ $$\text{Delay} = \text{random}(0, \min(\text{max\_interval}, \text{initial\_inte
 - **Fenced Finalization:** Finalization updates require `WHERE id = :id AND lease_token = :held_token AND status = 'running'`.
 - **Split-Brain Defense:** If a partitioned or paused zombie worker wakes up after its lease expired and was reclaimed by a new worker, its finalization matches 0 rows and is rejected without corrupting active job state.
 
+### 2.10 Deterministic Cron Execution Keys
+- **Deterministic Key Format:** `cron:<schedule_id>:<scheduled_for_iso>`.
+- **Duplicate Prevention:** Combines with PostgreSQL's partial unique index on `(queue_id, idempotency_key)` and `ON CONFLICT DO NOTHING`.
+- **Multi-Scheduler Safety:** High-availability scheduler daemon replicas can concurrently evaluate schedules without double-dispatching occurrences.
+
+
 
