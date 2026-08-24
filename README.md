@@ -1,4 +1,4 @@
-# ⚡ Codity Distributed Job Scheduler Platform
+# Codity Distributed Job Scheduler Platform
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16_ACID-316192?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
@@ -12,25 +12,25 @@
 
 ---
 
-## 📸 System Overview & Web Dashboard
+## System Overview & Web Dashboard
 
 ![Codity Distributed Job Scheduler Web Dashboard](docs/assets/dashboard_preview.png)
 
-### 🖥️ Dashboard Modules & Capabilities
+### Dashboard Modules & Capabilities
 
 | View / Module | Key Telemetry & Interactive Capabilities | Live Dashboard Feature |
 | :--- | :--- | :--- |
-| **📊 Overview & KPIs** | Live throughput (`jobs/s`), success & failure rates, average queue wait times, and system-wide telemetry charts | Real-time Recharts visual analytics |
-| **⚡ Queue Manager** | Concurrency limit sliders, live slot utilization gauge bars, and instant 1-click pause/resume toggles | Dynamic rate & concurrency control |
-| **📋 Job Stream** | Live execution feed, full-text search, status filters (`queued`, `running`, `completed`, `failed`), and slide-in terminal log drawer | Per-job execution latency breakdowns |
-| **📦 Batch Orchestrator** | Real-time progress bars (`75/100 completed, 3 failed`), batch status aggregation, batch-wide cancellation, and retry | Bulk task coordination |
-| **💀 DLQ Incident Center** | Stack trace capture, Google Gemini / OpenAI failure root-cause analysis, and 1-click replay / bulk redrive | Automated failure recovery |
-| **⏰ Cron Schedules** | 5-part cron syntax parser, next-fire execution previews, pause/resume schedules, and manual test dispatch triggers | Deterministic idempotent recurring jobs |
-| **🖥️ Worker Fleet** | Real-time node heartbeat liveness, health status badges (`IDLE`, `BUSY`, `DEAD`), and live CPU% & Memory (MB) timeseries | Fleet monitoring & auto-reaper status |
+| **Overview & KPIs** | Live throughput (`jobs/s`), success & failure rates, average queue wait times, and system-wide telemetry charts | Real-time Recharts visual analytics |
+| **Queue Manager** | Concurrency limit sliders, live slot utilization gauge bars, and instant 1-click pause/resume toggles | Dynamic rate & concurrency control |
+| **Job Stream** | Live execution feed, full-text search, status filters (`queued`, `running`, `completed`, `failed`), and slide-in terminal log drawer | Per-job execution latency breakdowns |
+| **Batch Orchestrator** | Real-time progress bars (`75/100 completed, 3 failed`), batch status aggregation, batch-wide cancellation, and retry | Bulk task coordination |
+| **DLQ Incident Center** | Stack trace capture, Google Gemini / OpenAI failure root-cause analysis, and 1-click replay / bulk redrive | Automated failure recovery |
+| **Cron Schedules** | 5-part cron syntax parser, next-fire execution previews, pause/resume schedules, and manual test dispatch triggers | Deterministic idempotent recurring jobs |
+| **Worker Fleet** | Real-time node heartbeat liveness, health status badges (`IDLE`, `BUSY`, `DEAD`), and live CPU% & Memory (MB) timeseries | Fleet monitoring & auto-reaper status |
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'Inter, sans-serif' }}}%%
@@ -43,41 +43,41 @@ flowchart TB
     classDef worker fill:#1E1B4B,stroke:#C084FC,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
     classDef daemon fill:#2D0612,stroke:#FB7185,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
 
-    subgraph CLIENTS["🎨 1. CLIENT & CONSUMER TIER"]
-        Browser["💻 React 19 Web Dashboard"]:::client
-        Microservices["⚡ External Microservices"]:::client
-        WSSubscribers["📡 Real-Time WebSocket Clients"]:::client
+    subgraph CLIENTS["1. CLIENT & CONSUMER TIER"]
+        Browser["React 19 Web Dashboard"]:::client
+        Microservices["External Microservices"]:::client
+        WSSubscribers["Real-Time WebSocket Clients"]:::client
     end
     style CLIENTS fill:#080E1A,stroke:#00E5FF,stroke-width:1.5px,stroke-dasharray: 4 4,color:#00E5FF,font-size:16px,font-weight:700
 
-    subgraph GATEWAY["🌐 2. INGRESS & REVERSE PROXY TIER"]
-        Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
+    subgraph GATEWAY["2. INGRESS & REVERSE PROXY TIER"]
+        Nginx["Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
     end
     style GATEWAY fill:#080E1A,stroke:#38BDF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#38BDF8,font-size:16px,font-weight:700
 
-    subgraph BACKEND["⚡ 3. CONTROL PLANE (FastAPI Cluster :8000)"]
-        API["🚀 FastAPI REST Router & Job Ingest"]:::api
-        Auth["🔒 JWT & RBAC Security Engine"]:::api
-        WSManager["📡 WebSocket Broadcast Hub"]:::api
-        Telemetry["📊 Telemetry & Observability Engine"]:::api
+    subgraph BACKEND["3. CONTROL PLANE (FastAPI Cluster :8000)"]
+        API["FastAPI REST Router & Job Ingest"]:::api
+        Auth["JWT & RBAC Security Engine"]:::api
+        WSManager["WebSocket Broadcast Hub"]:::api
+        Telemetry["Telemetry & Observability Engine"]:::api
     end
     style BACKEND fill:#080E1A,stroke:#818CF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#818CF8,font-size:16px,font-weight:700
 
-    subgraph STORAGE["🗄️ 4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
-        Postgres[("🐘 PostgreSQL 16 ACID Engine<br/>• FOR UPDATE SKIP LOCKED (Atomic Claiming)<br/>• Monotonic Lease Fencing Tokens<br/>• Job Batches & Partial B-Tree Indexes")]:::postgres
+    subgraph STORAGE["4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
+        Postgres[("PostgreSQL 16 ACID Engine<br/>• FOR UPDATE SKIP LOCKED (Atomic Claiming)<br/>• Monotonic Lease Fencing Tokens<br/>• Job Batches & Partial B-Tree Indexes")]:::postgres
     end
     style STORAGE fill:#080E1A,stroke:#10B981,stroke-width:1.5px,stroke-dasharray: 4 4,color:#10B981,font-size:16px,font-weight:700
 
-    subgraph WORKERS["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
-        WorkerFleet["⚙️ Distributed Worker Nodes (Daemons)<br/>• Sandboxed Task Execution Runner<br/>• Token-Bucket Rate Limiter & Concurrency Guard<br/>• DAG Workflow Dependency Cascade Resolver"]:::worker
+    subgraph WORKERS["5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
+        WorkerFleet["Distributed Worker Nodes (Daemons)<br/>• Sandboxed Task Execution Runner<br/>• Token-Bucket Rate Limiter & Concurrency Guard<br/>• DAG Workflow Dependency Cascade Resolver"]:::worker
     end
     style WORKERS fill:#080E1A,stroke:#C084FC,stroke-width:1.5px,stroke-dasharray: 4 4,color:#C084FC,font-size:16px,font-weight:700
 
-    subgraph DAEMONS["🤖 6. AUTONOMOUS BACKGROUND AUTOMATION"]
-        Promoter["🕒 ScheduledJobPromoter (delayed ➔ queued)"]:::daemon
-        Reaper["💀 Lease Reaper (dead worker recovery)"]:::daemon
-        Cron["⏰ Cron Dispatcher (recurring schedules)"]:::daemon
-        AIDiag["🧠 AI Diagnostics (Gemini / OpenAI LLM)"]:::daemon
+    subgraph DAEMONS["6. AUTONOMOUS BACKGROUND AUTOMATION"]
+        Promoter["ScheduledJobPromoter (delayed -> queued)"]:::daemon
+        Reaper["Lease Reaper (dead worker recovery)"]:::daemon
+        Cron["Cron Dispatcher (recurring schedules)"]:::daemon
+        AIDiag["AI Diagnostics (Gemini / OpenAI LLM)"]:::daemon
     end
     style DAEMONS fill:#080E1A,stroke:#FB7185,stroke-width:1.5px,stroke-dasharray: 4 4,color:#FB7185,font-size:16px,font-weight:700
 
@@ -92,7 +92,7 @@ flowchart TB
 
 ---
 
-## 🚀 Quickstart (Docker Compose)
+## Quickstart (Docker Compose)
 
 ### 1. Clone & Start the Cluster
 ```bash
@@ -104,10 +104,10 @@ docker compose up --build -d
 ```
 
 ### 2. Access the Application
-- **🎨 Web Dashboard:** [http://localhost:3000](http://localhost:3000) *(or [http://localhost:5173](http://localhost:5173))*
+- **Web Dashboard:** [http://localhost:3000](http://localhost:3000) *(or [http://localhost:5173](http://localhost:5173))*
   - **Quick Demo Login:** Click the 1-click login button on screen *(or use `admin@distributed-scheduler.io` / `Password123!`)*.
-- **📚 Interactive Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **📖 ReDoc API Reference:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **Interactive Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc API Reference:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ### 3. Scale Worker Nodes Horizontally
 ```bash
@@ -117,7 +117,7 @@ docker compose up --scale worker=5 -d
 
 ---
 
-## 🛠️ Local Development Setup
+## Local Development Setup
 
 ```bash
 # 1. Start PostgreSQL
@@ -143,7 +143,7 @@ cd frontend && npm install && npm run dev             # Terminal 4: Dashboard
 
 ---
 
-## ✨ Core Engineering Capabilities
+## Core Engineering Capabilities
 
 ### 1. ACID Atomic Claiming (`FOR UPDATE SKIP LOCKED`)
 - Workers poll for available queued tasks using a single atomic SQL transaction:
@@ -191,7 +191,7 @@ cd frontend && npm install && npm run dev             # Terminal 4: Dashboard
 
 ---
 
-## 📊 Baseline Performance Benchmarks
+## Baseline Performance Benchmarks
 
 Extracted from real execution benchmarks running against PostgreSQL 16 ([`docs/test-results.md`](docs/test-results.md)):
 
@@ -204,7 +204,7 @@ Extracted from real execution benchmarks running against PostgreSQL 16 ([`docs/t
 
 ---
 
-## 🧪 Comprehensive Test Suite
+## Comprehensive Test Suite
 
 ### 1. Backend Integration & Stress Suite (`pytest`)
 ```bash
@@ -254,16 +254,16 @@ Tests       17 passed (17)
 
 ---
 
-## 📖 In-Depth Engineering Documentation
+## Engineering Documentation
 
-- 📐 **[docs/architecture.md](docs/architecture.md)** — Subsystems, Sequence Diagrams & State Transitions.
-- 🗄️ **[docs/erd.md](docs/erd.md)** — Entity Relationship Diagram & Partial Indexing Strategy.
-- ⚖️ **[docs/design-decisions.md](docs/design-decisions.md)** — Architectural Trade-Offs (PostgreSQL `SKIP LOCKED` vs. Redis/RabbitMQ, Atomic Direct Transitions, Graceful Draining).
-- 🧪 **[docs/test-results.md](docs/test-results.md)** — Full Test Execution Log & Baseline Performance Benchmarks.
-- 📅 **[planner.md](planner.md)** — Engineering Deliverables Roadmap & Verification Checkpoints.
+- **[docs/architecture.md](docs/architecture.md)** — Subsystems, Sequence Diagrams & State Transitions.
+- **[docs/erd.md](docs/erd.md)** — Entity Relationship Diagram & Partial Indexing Strategy.
+- **[docs/design-decisions.md](docs/design-decisions.md)** — Architectural Trade-Offs (PostgreSQL `SKIP LOCKED` vs. Redis/RabbitMQ, Atomic Direct Transitions, Graceful Draining).
+- **[docs/test-results.md](docs/test-results.md)** — Full Test Execution Log & Baseline Performance Benchmarks.
+- **[planner.md](planner.md)** — Engineering Deliverables Roadmap & Verification Checkpoints.
 
 ---
 
-## 📜 License
+## License
 
 Distributed under the **MIT License**. See `LICENSE` for details.

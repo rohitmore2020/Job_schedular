@@ -15,41 +15,41 @@ flowchart TB
     classDef worker fill:#1E1B4B,stroke:#C084FC,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
     classDef daemon fill:#2D0612,stroke:#FB7185,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
 
-    subgraph CLIENTS["🎨 1. CLIENT & CONSUMER TIER"]
-        Browser["💻 React 19 Web Dashboard"]:::client
-        Microservices["⚡ External Microservices"]:::client
-        WSSubscribers["📡 Real-Time WebSocket Clients"]:::client
+    subgraph CLIENTS["1. CLIENT & CONSUMER TIER"]
+        Browser["React 19 Web Dashboard"]:::client
+        Microservices["External Microservices"]:::client
+        WSSubscribers["Real-Time WebSocket Clients"]:::client
     end
     style CLIENTS fill:#080E1A,stroke:#00E5FF,stroke-width:1.5px,stroke-dasharray: 4 4,color:#00E5FF,font-size:16px,font-weight:700
 
-    subgraph GATEWAY["🌐 2. INGRESS & REVERSE PROXY TIER"]
-        Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
+    subgraph GATEWAY["2. INGRESS & REVERSE PROXY TIER"]
+        Nginx["Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
     end
     style GATEWAY fill:#080E1A,stroke:#38BDF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#38BDF8,font-size:16px,font-weight:700
 
-    subgraph BACKEND["⚡ 3. CONTROL PLANE (FastAPI Cluster :8000)"]
-        API["🚀 FastAPI REST Router & Job Ingest"]:::api
-        AuthModule["🔒 JWT & RBAC Security Engine"]:::api
-        WSManager["📡 WebSocket Broadcast Hub"]:::api
-        Telemetry["📊 Telemetry & Observability Engine"]:::api
+    subgraph BACKEND["3. CONTROL PLANE (FastAPI Cluster :8000)"]
+        API["FastAPI REST Router & Job Ingest"]:::api
+        AuthModule["JWT & RBAC Security Engine"]:::api
+        WSManager["WebSocket Broadcast Hub"]:::api
+        Telemetry["Telemetry & Observability Engine"]:::api
     end
     style BACKEND fill:#080E1A,stroke:#818CF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#818CF8,font-size:16px,font-weight:700
 
-    subgraph STORAGE["🗄️ 4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
-        Postgres[("🐘 PostgreSQL 16 ACID Engine<br/>• FOR UPDATE SKIP LOCKED (Atomic Claiming)<br/>• Monotonic Lease Fencing Tokens<br/>• Job Batches & Partial B-Tree Indexes")]:::postgres
+    subgraph STORAGE["4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
+        Postgres[("PostgreSQL 16 ACID Engine<br/>• FOR UPDATE SKIP LOCKED (Atomic Claiming)<br/>• Monotonic Lease Fencing Tokens<br/>• Job Batches & Partial B-Tree Indexes")]:::postgres
     end
     style STORAGE fill:#080E1A,stroke:#10B981,stroke-width:1.5px,stroke-dasharray: 4 4,color:#10B981,font-size:16px,font-weight:700
 
-    subgraph WORKERS["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
-        WorkerFleet["⚙️ Distributed Worker Nodes (Daemons)<br/>• Sandboxed Task Execution Runner<br/>• Token-Bucket Rate Limiter & Concurrency Guard<br/>• DAG Workflow Dependency Cascade Resolver"]:::worker
+    subgraph WORKERS["5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
+        WorkerFleet["Distributed Worker Nodes (Daemons)<br/>• Sandboxed Task Execution Runner<br/>• Token-Bucket Rate Limiter & Concurrency Guard<br/>• DAG Workflow Dependency Cascade Resolver"]:::worker
     end
     style WORKERS fill:#080E1A,stroke:#C084FC,stroke-width:1.5px,stroke-dasharray: 4 4,color:#C084FC,font-size:16px,font-weight:700
 
-    subgraph DAEMONS["🤖 6. AUTONOMOUS BACKGROUND AUTOMATION"]
-        Promoter["🕒 ScheduledJobPromoter (delayed ➔ queued)"]:::daemon
-        Reaper["💀 Lease Reaper (dead worker recovery)"]:::daemon
-        CronDispatcher["⏰ Cron Dispatcher (recurring schedules)"]:::daemon
-        AIDiagnostics["🧠 AI Diagnostics (Gemini / OpenAI LLM)"]:::daemon
+    subgraph DAEMONS["6. AUTONOMOUS BACKGROUND AUTOMATION"]
+        Promoter["ScheduledJobPromoter (delayed -> queued)"]:::daemon
+        Reaper["Lease Reaper (dead worker recovery)"]:::daemon
+        CronDispatcher["Cron Dispatcher (recurring schedules)"]:::daemon
+        AIDiagnostics["AI Diagnostics (Gemini / OpenAI LLM)"]:::daemon
     end
     style DAEMONS fill:#080E1A,stroke:#FB7185,stroke-width:1.5px,stroke-dasharray: 4 4,color:#FB7185,font-size:16px,font-weight:700
 
