@@ -18,6 +18,7 @@ services:
       retries: 5
 
   api:
+    image: rohitmore2020/job-scheduler-api:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
@@ -40,6 +41,7 @@ services:
              uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
 
   worker:
+    image: rohitmore2020/job-scheduler-worker:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
@@ -57,6 +59,7 @@ services:
     command: python -m worker.main
 
   reaper_scheduler:
+    image: rohitmore2020/job-scheduler-worker:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
@@ -72,6 +75,7 @@ services:
     command: python -m worker.scheduler_main
 
   frontend:
+    image: rohitmore2020/job-scheduler-frontend:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend

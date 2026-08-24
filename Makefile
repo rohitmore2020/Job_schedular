@@ -1,4 +1,4 @@
-.PHONY: help setup run-api run-worker run-scheduler migrate reset-db seed test docker-up docker-down clean
+.PHONY: help setup run-api run-worker run-scheduler migrate reset-db seed test docker-up docker-down docker-build docker-push docker-pull clean
 
 VENV = .venv
 PYTHON = $(VENV)/bin/python
@@ -19,6 +19,9 @@ help:
 	@echo "  make test           - Run automated tests and concurrency suites"
 	@echo "  make docker-up      - Spin up all services via Docker Compose"
 	@echo "  make docker-down    - Stop and remove Docker containers"
+	@echo "  make docker-build   - Build all Docker images locally"
+	@echo "  make docker-push    - Push images to Docker Hub registry"
+	@echo "  make docker-pull    - Pull latest images from Docker Hub"
 	@echo "  make clean          - Remove pycache and temporary build artifacts"
 
 setup:
@@ -48,10 +51,19 @@ test:
 	$(PYTEST) tests/ -v -s
 
 docker-up:
-	docker compose up --build -d
+	docker compose up -d
 
 docker-down:
 	docker compose down
+
+docker-build:
+	docker compose build
+
+docker-push:
+	docker compose push
+
+docker-pull:
+	docker compose pull
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

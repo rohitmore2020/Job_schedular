@@ -4,11 +4,24 @@
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16_ACID-316192?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose_Verified-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
+[![Docker Hub](https://img.shields.io/badge/Docker_Hub-Published_Images-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/u/rohitmore2020)
 [![Tests Passing](https://img.shields.io/badge/Tests-101%2F101_Passing-brightgreen?style=flat-square&logo=pytest)](https://pytest.org)
 [![Coverage](https://img.shields.io/badge/Coverage-74%25-informational?style=flat-square)](docs/test-results.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 > **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler built on PostgreSQL ACID transactions (`FOR UPDATE SKIP LOCKED`). Features atomic queue claiming, lease fencing tokens against split-brain zombie workers, first-class batch orchestration, DAG dependency workflows, recurring cron scheduling, real-time WebSocket event streaming, AI-powered root-cause failure diagnostics, and a dark cybernetic dashboard.**
+
+---
+
+## Docker Hub Registry Images
+
+Official pre-built, production-ready images are published and maintained on [Docker Hub](https://hub.docker.com/u/rohitmore2020):
+
+| Service | Docker Hub Repository | Tags | Pull Command |
+| :--- | :--- | :--- | :--- |
+| **REST Control Plane & API** | [`rohitmore2020/job-scheduler-api`](https://hub.docker.com/r/rohitmore2020/job-scheduler-api) | `latest` | `docker pull rohitmore2020/job-scheduler-api:latest` |
+| **Worker Engine & Daemons** | [`rohitmore2020/job-scheduler-worker`](https://hub.docker.com/r/rohitmore2020/job-scheduler-worker) | `latest` | `docker pull rohitmore2020/job-scheduler-worker:latest` |
+| **React 19 Cybernetic UI** | [`rohitmore2020/job-scheduler-frontend`](https://hub.docker.com/r/rohitmore2020/job-scheduler-frontend) | `latest` | `docker pull rohitmore2020/job-scheduler-frontend:latest` |
 
 ---
 
@@ -94,14 +107,17 @@ flowchart TB
 
 ## Quickstart (Docker Compose)
 
-### 1. Clone & Start the Cluster
+### 1. Run Instantly from Docker Hub
 ```bash
 git clone https://github.com/rohitmore2020/Job_schedular.git
 cd Job_schedular
 
-# Start all 5 microservices (PostgreSQL, API, Worker, Reaper/Cron, Frontend)
-docker compose up --build -d
+# Pull images directly from Docker Hub and start cluster
+docker compose pull
+docker compose up -d
 ```
+
+*(Alternatively, build from local source using `docker compose up --build -d`)*
 
 ### 2. Access the Application
 - **Web Dashboard:** [http://localhost:3000](http://localhost:3000) *(or [http://localhost:5173](http://localhost:5173))*
