@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import AsyncSessionLocal
 from backend.app.models import Job, JobStatus
+from backend.app.core.ws_manager import ws_manager
 
 logger = logging.getLogger("scheduler.promoter")
 
@@ -70,6 +71,10 @@ class ScheduledJobPromoter:
 
         if promoted_ids:
             logger.info(f"⚡ [Promoter] Promoted {len(promoted_ids)} scheduled jobs to 'queued' state")
+            await ws_manager.broadcast("jobs_promoted", {
+                "count": len(promoted_ids),
+                "job_ids": [str(x) for x in promoted_ids],
+            })
 
         return len(promoted_ids)
 

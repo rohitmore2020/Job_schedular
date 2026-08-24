@@ -18,6 +18,7 @@ from backend.app.schemas.job import (
     JobListResponse,
 )
 from backend.app.services.queue_service import QueueService
+from backend.app.core.ws_manager import ws_manager
 
 
 class JobService:
@@ -114,6 +115,13 @@ class JobService:
                     stmt = select(Job).where(Job.id == row[0])
                     res = await db.execute(stmt)
                     job = res.scalar_one()
+                    await ws_manager.broadcast("job_created", {
+                        "job_id": str(job.id),
+                        "name": job.name,
+                        "status": job.status.value,
+                        "queue_id": str(target_queue_id),
+                        "run_at": job.run_at.isoformat() if job.run_at else None,
+                    })
                     return JobResponse.model_validate(job)
                 else:
                     # Conflict occurred (another concurrent transaction inserted same key)
@@ -150,6 +158,13 @@ class JobService:
             db.add(job)
             await db.commit()
             await db.refresh(job)
+            await ws_manager.broadcast("job_created", {
+                "job_id": str(job.id),
+                "name": job.name,
+                "status": job.status.value,
+                "queue_id": str(target_queue_id),
+                "run_at": job.run_at.isoformat() if job.run_at else None,
+            })
             return JobResponse.model_validate(job)
 
     @staticmethod
@@ -233,6 +248,12 @@ class JobService:
         stmt = select(Job).where(Job.id.in_(resolved_job_ids))
         res = await db.execute(stmt)
         jobs_map = {j.id: j for j in res.scalars().all()}
+
+        await ws_manager.broadcast("jobs_batch_created", {
+            "count": len(resolved_job_ids),
+            "queue_id": str(target_queue_id),
+            "job_ids": [str(jid) for jid in resolved_job_ids],
+        })
 
         return [JobResponse.model_validate(jobs_map[jid]) for jid in resolved_job_ids if jid in jobs_map]
 
@@ -358,6 +379,13 @@ class JobService:
         await db.commit()
         await db.refresh(job)
 
+        await ws_manager.broadcast("job_cancelled", {
+            "job_id": str(job.id),
+            "name": job.name,
+            "status": job.status.value,
+            "queue_id": str(job.queue_id),
+        })
+
         return JobResponse.model_validate(job)
 
     @staticmethod
@@ -386,6 +414,13 @@ class JobService:
         job.updated_at = now_utc
         await db.commit()
         await db.refresh(job)
+
+        await ws_manager.broadcast("job_retried", {
+            "job_id": str(job.id),
+            "name": job.name,
+            "status": job.status.value,
+            "queue_id": str(job.queue_id),
+        })
 
         return JobResponse.model_validate(job)
 

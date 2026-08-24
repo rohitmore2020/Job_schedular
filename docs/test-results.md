@@ -9,14 +9,14 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 88
-- **Passed:** 88
+- **Total tests:** 92
+- **Passed:** 92
 - **Failed:** 0
 - **Skipped:** 0
-- **Coverage:** 71%
+- **Coverage:** 72%
 
 ```
-======================== 88 passed, 1 warning in 36.01s ========================
+======================== 92 passed, 1 warning in 37.76s ========================
 ```
 
 ### 📋 Test Suite Breakdown
@@ -41,6 +41,7 @@
 | `tests/test_distributed_stress_and_races.py` | Mutual exclusion (2 workers/1 job), 100 jobs/5 workers drain, concurrency limit invariant ($\le 3$), worker crash recovery & fencing, 100-burst idempotency, 3-node HA scheduler race | 6/6 | ✅ PASSED |
 | `tests/test_graceful_shutdown.py` | Worker SIGTERM handling $\to$ stop polling $\to$ finish active tasks $\to$ heartbeat = DRAINING $\to$ clean exit (DEAD) | 1/1 | ✅ PASSED |
 | `tests/test_retry_matrix.py` | Mathematical matrix evaluation (Fixed, Linear, Exponential), max delay capping, jitter randomization, DLQ escalation | 13/13 | ✅ PASSED |
+| `tests/test_websocket_realtime_broadcast.py` | WebSocket live events (job creation, execution start/complete, cancel/retry, multi-tab broadcast fanout, worker heartbeats) | 4/4 | ✅ PASSED |
 | `tests/test_worker_leases_and_recovery.py` | Normal lease lifecycle (Claim -> Lease -> Heartbeat -> Renew -> Complete), Crash recovery (Heartbeat stops -> Worker DEAD -> Lease expires -> Reaper -> Job requeued) | 2/2 | ✅ PASSED |
 | `tests/test_zombie_worker_fencing.py` | Zombie worker split-brain defense: Worker A frozen $\to$ Worker B reclaims & completes (SUCCESS) $\to$ Zombie Worker A wakes & attempts completion (REJECTED/KILLED) | 1/1 | ✅ PASSED |
 

@@ -15,6 +15,7 @@ from backend.app.schemas.queue import (
     RetryPolicyResponse,
 )
 from backend.app.services.project_service import ProjectService
+from backend.app.core.ws_manager import ws_manager
 
 
 class QueueService:
@@ -236,6 +237,13 @@ class QueueService:
         stats = await QueueService.get_queue_stats(db, queue.id)
         resp = QueueResponse.model_validate(queue)
         resp.stats = stats
+
+        await ws_manager.broadcast("queue_updated", {
+            "queue_id": str(queue.id),
+            "name": queue.name,
+            "is_paused": True,
+        })
+
         return resp
 
     @staticmethod
@@ -247,6 +255,13 @@ class QueueService:
         stats = await QueueService.get_queue_stats(db, queue.id)
         resp = QueueResponse.model_validate(queue)
         resp.stats = stats
+
+        await ws_manager.broadcast("queue_updated", {
+            "queue_id": str(queue.id),
+            "name": queue.name,
+            "is_paused": False,
+        })
+
         return resp
 
     @staticmethod

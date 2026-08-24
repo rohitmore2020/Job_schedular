@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.database import AsyncSessionLocal
 from backend.app.core.config import settings
 from backend.app.models import Job, DLQEntry, Worker, JobStatus, WorkerStatus
+from backend.app.core.ws_manager import ws_manager
 
 logger = logging.getLogger("scheduler.reaper")
 
@@ -109,6 +110,13 @@ class LeaseReaper:
                 logger.warning(f"💀 [Reaper] Escalated Job '{job.name}' ({job.id}) to Dead Letter Queue")
 
         await session.commit()
+
+        if len(dead_worker_ids) > 0 or requeued_count > 0 or dlq_count > 0:
+            await ws_manager.broadcast("reaper_sweep", {
+                "dead_workers": len(dead_worker_ids),
+                "jobs_requeued": requeued_count,
+                "jobs_dlq": dlq_count,
+            })
 
         return {
             "dead_workers_detected": len(dead_worker_ids),

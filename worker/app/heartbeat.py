@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.database import AsyncSessionLocal
 from backend.app.core.config import settings
 from backend.app.models import Worker, WorkerHeartbeat, Job, JobStatus
+from backend.app.core.ws_manager import ws_manager
 
 logger = logging.getLogger("scheduler.worker.heartbeat")
 
@@ -55,13 +56,17 @@ class WorkerHeartbeatEmitter:
             async with AsyncSessionLocal() as sess:
                 await self._record_heartbeat(sess, now_utc, cpu_percent, memory_mb, active_count)
 
-        return {
+        data = {
             "worker_id": self.worker_id,
             "cpu_percent": cpu_percent,
-            "memory_mb": memory_mb,
+            "memory_mb": round(memory_mb, 2),
             "active_jobs": active_count,
-            "timestamp": now_utc,
+            "timestamp": now_utc.isoformat(),
         }
+
+        await ws_manager.broadcast("worker_heartbeat", data)
+
+        return data
 
     async def _record_heartbeat(
         self, session: AsyncSession, now_utc: datetime, cpu_percent: float, memory_mb: float, active_count: int

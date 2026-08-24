@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models import Job, JobExecution, DLQEntry, Queue, RetryPolicy, JobStatus, ExecutionStatus
+from backend.app.core.ws_manager import ws_manager
 from worker.app.tasks.registry import task_registry
 from worker.app.engine.retry import RetryBackoffCalculator
 from worker.app.engine.ai_diagnostics import AIDiagnosticEngine
@@ -76,6 +77,14 @@ class TaskRunner:
             f"▶️ [Worker {worker_id}] Executing Job '{job.name}' (ID: {job.id}, "
             f"Execution ID: {execution_id}, Lease: {held_lease_token}, Attempt: {job.attempt_count}/{job.max_retries})"
         )
+
+        await ws_manager.broadcast("job_running", {
+            "job_id": str(job.id),
+            "name": job.name,
+            "status": "running",
+            "worker_id": worker_id,
+            "attempt": job.attempt_count,
+        })
 
         handler = task_registry.get(job.name)
         status_enum = ExecutionStatus.SUCCESS
@@ -151,6 +160,14 @@ class TaskRunner:
 
             logger.info(f"✅ [Worker {worker_id}] Job '{job.name}' ({job.id}) completed in {duration_ms}ms (Lease: {context.lease_token})")
 
+            await ws_manager.broadcast("job_completed", {
+                "job_id": str(job.id),
+                "name": job.name,
+                "status": "completed",
+                "duration_ms": duration_ms,
+                "worker_id": worker_id,
+            })
+
             # ⛓️ DAG Workflow: Unlock dependent child jobs
             child_stmt = select(Job).where(
                 Job.parent_job_id == job.id,
@@ -163,6 +180,11 @@ class TaskRunner:
                 child.run_at = end_wall_time
                 child.updated_at = end_wall_time
                 logger.info(f"⛓️ [DAG Engine] Unlocked downstream child Job '{child.name}' ({child.id})")
+                await ws_manager.broadcast("job_queued", {
+                    "job_id": str(child.id),
+                    "name": child.name,
+                    "status": "queued",
+                })
 
         else:
             # Failure handling with lease fencing token protection
@@ -203,6 +225,15 @@ class TaskRunner:
                 logger.info(
                     f"🔄 [Worker {worker_id}] Job '{job.name}' ({job.id}) scheduled for retry in {backoff_seconds}s (Attempt {job.attempt_count}/{job.max_retries})"
                 )
+
+                await ws_manager.broadcast("job_retrying", {
+                    "job_id": str(job.id),
+                    "name": job.name,
+                    "status": "scheduled" if backoff_seconds > 0 else "queued",
+                    "backoff_seconds": backoff_seconds,
+                    "attempt": job.attempt_count,
+                    "worker_id": worker_id,
+                })
             else:
                 finalize_stmt = (
                     update(Job)
@@ -252,6 +283,14 @@ class TaskRunner:
                 )
                 session.add(dlq)
 
+                await ws_manager.broadcast("job_dead_letter", {
+                    "job_id": str(job.id),
+                    "name": job.name,
+                    "status": "dead_letter",
+                    "error": error_msg,
+                    "worker_id": worker_id,
+                })
+
                 # ⛓️ DAG Workflow: Cancel dependent child jobs if parent died in DLQ
                 child_stmt = select(Job).where(
                     Job.parent_job_id == job.id,
@@ -264,6 +303,11 @@ class TaskRunner:
                     child.error_message = f"Parent DAG Job ({job.id}) failed permanently and moved to DLQ."
                     child.updated_at = end_wall_time
                     logger.warning(f"⛓️ [DAG Engine] Cancelled child Job '{child.name}' ({child.id}) due to parent failure.")
+                    await ws_manager.broadcast("job_cancelled", {
+                        "job_id": str(child.id),
+                        "name": child.name,
+                        "status": "cancelled",
+                    })
 
         await session.commit()
         return execution

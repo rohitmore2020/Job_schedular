@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import AsyncSessionLocal
 from backend.app.models import ScheduledJob, Job, JobStatus
+from backend.app.core.ws_manager import ws_manager
 
 logger = logging.getLogger("scheduler.cron")
 
@@ -103,6 +104,12 @@ class CronDispatcher:
                 logger.info(
                     f"⏰ [Cron] Dispatched recurring Job '{schedule.name}' (Schedule: {schedule.id}, Key: {idempotency_key})"
                 )
+                await ws_manager.broadcast("cron_dispatched", {
+                    "schedule_id": str(schedule.id),
+                    "job_id": str(row[0]),
+                    "name": schedule.name,
+                    "queue_id": str(schedule.queue_id),
+                })
             else:
                 logger.info(
                     f"🛡️ [Cron Guard] Duplicate occurrence suppressed for Schedule '{schedule.name}' (Key: {idempotency_key})"
