@@ -9,20 +9,21 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 69
-- **Passed:** 69
+- **Total tests:** 71
+- **Passed:** 71
 - **Failed:** 0
 - **Skipped:** 0
 - **Coverage:** 71%
 
 ```
-======================== 69 passed, 1 warning in 31.47s ========================
+======================== 71 passed, 1 warning in 34.70s ========================
 ```
 
 ### 📋 Test Suite Breakdown
 
 | Test File | Scenarios Tested | Passed | Status |
 | :--- | :--- | :---: | :---: |
+| `tests/test_atomic_claiming.py` | 100 jobs across 5 concurrent workers (100 unique executions, 0 duplicates), 10-worker collision storm | 2/2 | ✅ PASSED |
 | `tests/test_day1_setup.py` | DB connectivity, `/health`, `/` root endpoint | 3/3 | ✅ PASSED |
 | `tests/test_day2_models.py` | Org/Project/User hierarchy, queue retry policy, idempotency constraints, job execution lifecycle | 5/5 | ✅ PASSED |
 | `tests/test_day4_auth.py` | Signup, duplicate email prevention, password hashing, JWT refresh rotation, `/me` auth guards | 5/5 | ✅ PASSED |
