@@ -25,25 +25,25 @@
 | :--- | :--- | :---: | :---: |
 | `tests/test_ai_llm_diagnostics.py` | Gemini LLM integration, OpenAI API integration, network/API failure fallback, offline zero-key rule engine | 4/4 | ✅ PASSED |
 | `tests/test_atomic_claiming.py` | 100 jobs across 5 concurrent workers (100 unique executions, 0 duplicates), 10-worker collision storm | 2/2 | ✅ PASSED |
-| `tests/test_day1_setup.py` | DB connectivity, `/health`, `/` root endpoint | 3/3 | ✅ PASSED |
-| `tests/test_day2_models.py` | Org/Project/User hierarchy, queue retry policy, idempotency constraints, job execution lifecycle | 5/5 | ✅ PASSED |
-| `tests/test_day4_auth.py` | Signup, duplicate email prevention, password hashing, JWT refresh rotation, `/me` auth guards | 5/5 | ✅ PASSED |
-| `tests/test_day5_projects_queues.py` | Project CRUD, tenant isolation, API key generation, queue pause/resume | 3/3 | ✅ PASSED |
-| `tests/test_day6_jobs.py` | Immediate & delayed scheduling, idempotency deduplication, race deduplication, batch submission, filtering & pagination, cancel/retry | 7/7 | ✅ PASSED |
-| `tests/test_day7_worker_concurrency.py` | Atomic SKIP LOCKED claiming, multi-worker racing, concurrency caps, paused queue bypass, failure tracebacks | 6/6 | ✅ PASSED |
-| `tests/test_day8_heartbeat_reaper.py` | Telemetry heartbeats, dead worker detection, lease reaper recovery, split-brain lease fencing, worker REST API | 5/5 | ✅ PASSED |
-| `tests/test_day9_retry_dlq.py` | Exponential & jitter backoff algorithms, scheduled retry execution, DLQ escalation & 1-click redrive replay | 3/3 | ✅ PASSED |
-| `tests/test_day10_cron_ws.py` | 5-part cron iter calculation, recurring job dispatching, concurrent cron deduplication, WebSocket pub/sub | 5/5 | ✅ PASSED |
-| `tests/test_day13_bonus_features.py` | DAG dependency cascade & cancellation, Token-Bucket rate limiter, AI failure diagnostic engine, at-least-once side-effect idempotency | 5/5 | ✅ PASSED |
-| `tests/test_day14_batch_jobs.py` | Batch REST endpoints, child job enqueuing, live progress aggregation (`100% completed`), batch cancel & retry | 4/4 | ✅ PASSED |
-| `tests/test_day15_rbac_and_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`), cross-tenant 404 security barriers | 4/4 | ✅ PASSED |
-| `tests/test_day16_telemetry_observability.py` | System KPI rates, queue depth & wait time metrics, fleet heartbeat age, per-job latency breakdowns | 4/4 | ✅ PASSED |
-| `tests/test_day17_delayed_promoter.py` | Delayed job execution lifecycle, batch promotion, multi-promoter HA race protection, scheduled job concurrency race | 4/4 | ✅ PASSED |
+| `tests/test_authentication_and_jwt.py` | Signup, duplicate email prevention, password hashing, JWT refresh rotation, `/me` auth guards | 5/5 | ✅ PASSED |
+| `tests/test_batch_orchestration.py` | Batch REST endpoints, child job enqueuing, live progress aggregation (`100% completed`), batch cancel & retry | 4/4 | ✅ PASSED |
+| `tests/test_cron_schedules_and_websockets.py` | 5-part cron iter calculation, recurring job dispatching, concurrent cron deduplication, WebSocket pub/sub | 4/4 | ✅ PASSED |
+| `tests/test_dag_workflows_and_rate_limiting.py` | DAG dependency cascade & cancellation, Token-Bucket rate limiter, AI failure diagnostic engine, at-least-once side-effect idempotency | 5/5 | ✅ PASSED |
+| `tests/test_database_models_and_schema.py` | Org/Project/User hierarchy, queue retry policy, idempotency constraints, job execution lifecycle | 5/5 | ✅ PASSED |
 | `tests/test_distributed_stress_and_races.py` | Mutual exclusion (2 workers/1 job), 100 jobs/5 workers drain, concurrency limit invariant ($\le 3$), worker crash recovery & fencing, 100-burst idempotency, 3-node HA scheduler race | 6/6 | ✅ PASSED |
 | `tests/test_docker_compose_and_images.py` | Docker compose schema, PostgreSQL healthchecks, API/Worker/Scheduler Dockerfile structures, Nginx reverse proxy & WebSocket upgrade | 5/5 | ✅ PASSED |
 | `tests/test_graceful_shutdown.py` | Worker SIGTERM handling $\to$ stop polling $\to$ finish active tasks $\to$ heartbeat = DRAINING $\to$ clean exit (DEAD) | 1/1 | ✅ PASSED |
+| `tests/test_heartbeat_and_lease_reaper.py` | Telemetry heartbeats, dead worker detection, lease reaper recovery, split-brain lease fencing, worker REST API | 5/5 | ✅ PASSED |
+| `tests/test_job_lifecycle_and_crud.py` | Immediate & delayed scheduling, idempotency deduplication, race deduplication, batch submission, filtering & pagination, cancel/retry | 7/7 | ✅ PASSED |
+| `tests/test_projects_and_queues_api.py` | Project CRUD, tenant isolation, API key generation, queue pause/resume | 3/3 | ✅ PASSED |
+| `tests/test_rbac_and_tenant_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`), cross-tenant 404 security barriers | 4/4 | ✅ PASSED |
+| `tests/test_retry_backoff_and_dlq.py` | Exponential & jitter backoff algorithms, scheduled retry execution, DLQ escalation & 1-click redrive replay | 3/3 | ✅ PASSED |
 | `tests/test_retry_matrix.py` | Mathematical matrix evaluation (Fixed, Linear, Exponential), max delay capping, jitter randomization, DLQ escalation | 13/13 | ✅ PASSED |
+| `tests/test_scheduled_job_promoter.py` | Delayed job execution lifecycle, batch promotion, multi-promoter HA race protection, scheduled job concurrency race | 4/4 | ✅ PASSED |
+| `tests/test_setup_and_health.py` | DB connectivity, `/health`, `/` root endpoint | 3/3 | ✅ PASSED |
+| `tests/test_telemetry_and_observability.py` | System KPI rates, queue depth & wait time metrics, fleet heartbeat age, per-job latency breakdowns | 4/4 | ✅ PASSED |
 | `tests/test_websocket_realtime_broadcast.py` | WebSocket live events (job creation, execution start/complete, cancel/retry, multi-tab broadcast fanout, worker heartbeats) | 4/4 | ✅ PASSED |
+| `tests/test_worker_concurrency_and_execution.py` | Atomic SKIP LOCKED claiming, multi-worker racing, concurrency caps, paused queue bypass, failure tracebacks | 6/6 | ✅ PASSED |
 | `tests/test_worker_leases_and_recovery.py` | Normal lease lifecycle (Claim -> Lease -> Heartbeat -> Renew -> Complete), Crash recovery (Heartbeat stops -> Worker DEAD -> Lease expires -> Reaper -> Job requeued) | 2/2 | ✅ PASSED |
 | `tests/test_zombie_worker_fencing.py` | Zombie worker split-brain defense: Worker A frozen $\to$ Worker B reclaims & completes (SUCCESS) $\to$ Zombie Worker A wakes & attempts completion (REJECTED/KILLED) | 1/1 | ✅ PASSED |
 

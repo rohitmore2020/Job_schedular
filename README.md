@@ -220,8 +220,8 @@ Extracted from real execution benchmarks running against PostgreSQL 16 ([`docs/t
 
 | Test File | Scenarios Tested | Passed | Status |
 | :--- | :--- | :---: | :---: |
-| `tests/test_atomic_claiming.py` | 100 jobs on 5 workers (100 unique, 0 duplicate executions) | 2/2 | ✅ PASSED |
-| `tests/test_day17_delayed_promoter.py` | Delayed job lifecycle, batch promoter, HA race safety | 4/4 | ✅ PASSED |
+| `tests/test_atomic_claiming.py` | 100 jobs on 5 workers (100 unique executions, 0 duplicates) | 2/2 | ✅ PASSED |
+| `tests/test_scheduled_job_promoter.py` | Delayed job lifecycle, batch promoter, multi-promoter HA race safety | 4/4 | ✅ PASSED |
 | `tests/test_worker_leases_and_recovery.py` | Lease renewal lifecycle & dead worker reaper requeue | 2/2 | ✅ PASSED |
 | `tests/test_zombie_worker_fencing.py` | Zombie worker split-brain fencing and rejection | 1/1 | ✅ PASSED |
 | `tests/test_graceful_shutdown.py` | Worker SIGTERM handling $\to$ stop polling $\to$ drain $\to$ exit | 1/1 | ✅ PASSED |
@@ -230,11 +230,19 @@ Extracted from real execution benchmarks running against PostgreSQL 16 ([`docs/t
 | `tests/test_websocket_realtime_broadcast.py` | Real-time WebSocket broadcasting across tabs & heartbeats | 4/4 | ✅ PASSED |
 | `tests/test_docker_compose_and_images.py` | Docker compose schema, container healthchecks & Nginx | 5/5 | ✅ PASSED |
 | `tests/test_distributed_stress_and_races.py` | Concurrency limits, multi-node HA scheduler races | 6/6 | ✅ PASSED |
-| `tests/test_day13_bonus_features.py` | DAG cascades, Token-Bucket rate limiting, Idempotency | 5/5 | ✅ PASSED |
-| `tests/test_day14_batch_jobs.py` | Batch endpoints, child job aggregation, batch cancel | 4/4 | ✅ PASSED |
-| `tests/test_day15_rbac_and_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`) | 4/4 | ✅ PASSED |
-| `tests/test_day16_telemetry_observability.py` | System KPIs, queue wait times, worker telemetry | 4/4 | ✅ PASSED |
-| *Core Setup & API Suites* | Auth, Projects, Queues, Jobs CRUD, Cron dispatching | 42/42 | ✅ PASSED |
+| `tests/test_dag_workflows_and_rate_limiting.py` | DAG cascades, Token-Bucket rate limiting, Idempotency | 5/5 | ✅ PASSED |
+| `tests/test_batch_orchestration.py` | Batch endpoints, child job aggregation, batch cancel | 4/4 | ✅ PASSED |
+| `tests/test_rbac_and_tenant_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`) | 4/4 | ✅ PASSED |
+| `tests/test_telemetry_and_observability.py` | System KPIs, queue wait times, worker telemetry | 4/4 | ✅ PASSED |
+| `tests/test_cron_schedules_and_websockets.py` | 5-part cron syntax parsing & recurring job dispatching | 4/4 | ✅ PASSED |
+| `tests/test_retry_backoff_and_dlq.py` | Retry backoff schedules & 1-click DLQ replay redrive | 3/3 | ✅ PASSED |
+| `tests/test_heartbeat_and_lease_reaper.py` | Worker heartbeats, dead worker reaper & fencing | 5/5 | ✅ PASSED |
+| `tests/test_worker_concurrency_and_execution.py` | Atomic SKIP LOCKED claiming & queue concurrency caps | 6/6 | ✅ PASSED |
+| `tests/test_job_lifecycle_and_crud.py` | Immediate/delayed jobs, batch submission, filtering | 7/7 | ✅ PASSED |
+| `tests/test_projects_and_queues_api.py` | Project CRUD, tenant barriers, queue pause/resume | 3/3 | ✅ PASSED |
+| `tests/test_authentication_and_jwt.py` | Signup, login, password hashing, JWT refresh rotation | 5/5 | ✅ PASSED |
+| `tests/test_database_models_and_schema.py` | Database relational hierarchy, models & constraints | 5/5 | ✅ PASSED |
+| `tests/test_setup_and_health.py` | Database connectivity, `/health` and `/` endpoints | 3/3 | ✅ PASSED |
 | **Total Backend Tests** | **Full Integration & Concurrency Test Suite** | **101/101** | **✅ PASSED** |
 
 ### 2. Frontend UI Runtime Test Suite (`vitest`)
