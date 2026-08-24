@@ -54,7 +54,7 @@ class JobService:
             run_at = req.run_at
 
         # Determine initial status
-        initial_status = JobStatus.SCHEDULED if run_at > now_utc + timedelta(seconds=2) else JobStatus.QUEUED
+        initial_status = JobStatus.SCHEDULED if run_at > now_utc else JobStatus.QUEUED
 
         # ⛓️ DAG Workflow parent dependency check
         if req.parent_job_id:

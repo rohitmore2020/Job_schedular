@@ -14,6 +14,7 @@ from rich.logging import RichHandler
 from backend.app.core.config import settings
 from worker.app.reaper import LeaseReaper
 from worker.app.cron import CronDispatcher
+from worker.app.promoter import ScheduledJobPromoter
 
 logging.basicConfig(
     level=settings.LOG_LEVEL,
@@ -27,6 +28,7 @@ logger = logging.getLogger("scheduler.daemon")
 async def main():
     reaper = LeaseReaper(scan_interval=settings.REAPER_SCAN_INTERVAL_SECONDS)
     cron = CronDispatcher(check_interval_seconds=5)
+    promoter = ScheduledJobPromoter(scan_interval_seconds=1.0)
 
     loop = asyncio.get_running_loop()
 
@@ -34,16 +36,18 @@ async def main():
         logger.info("🛑 Shutting down scheduler daemons...")
         await reaper.stop()
         await cron.stop()
+        await promoter.stop()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown()))
 
     await reaper.start()
     await cron.start()
-    logger.info("🚀 Scheduler Daemons (Lease Reaper + Cron Dispatcher) running successfully.")
+    await promoter.start()
+    logger.info("🚀 Scheduler Daemons (Lease Reaper + Cron Dispatcher + Scheduled Job Promoter) running successfully.")
 
     try:
-        while reaper.is_running and cron.is_running:
+        while reaper.is_running and cron.is_running and promoter.is_running:
             await asyncio.sleep(1)
     except (asyncio.CancelledError, KeyboardInterrupt):
         await shutdown()

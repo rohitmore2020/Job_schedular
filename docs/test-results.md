@@ -9,14 +9,14 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 65
-- **Passed:** 65
+- **Total tests:** 69
+- **Passed:** 69
 - **Failed:** 0
 - **Skipped:** 0
-- **Coverage:** 69%
+- **Coverage:** 71%
 
 ```
-======================== 65 passed, 1 warning in 35.60s ========================
+======================== 69 passed, 1 warning in 31.47s ========================
 ```
 
 ### 📋 Test Suite Breakdown
@@ -36,6 +36,7 @@
 | `tests/test_day14_batch_jobs.py` | Batch REST endpoints, child job enqueuing, live progress aggregation (`100% completed`), batch cancel & retry | 4/4 | ✅ PASSED |
 | `tests/test_day15_rbac_and_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`), cross-tenant 404 security barriers | 4/4 | ✅ PASSED |
 | `tests/test_day16_telemetry_observability.py` | System KPI rates, queue depth & wait time metrics, fleet heartbeat age, per-job latency breakdowns | 4/4 | ✅ PASSED |
+| `tests/test_day17_delayed_promoter.py` | Delayed job execution lifecycle, batch promotion, multi-promoter HA race protection, scheduled job concurrency race | 4/4 | ✅ PASSED |
 | `tests/test_distributed_stress_and_races.py` | Mutual exclusion (2 workers/1 job), 100 jobs/5 workers drain, concurrency limit invariant ($\le 3$), worker crash recovery & fencing, 100-burst idempotency, 3-node HA scheduler race | 6/6 | ✅ PASSED |
 
 ### 📈 Code Coverage by Module

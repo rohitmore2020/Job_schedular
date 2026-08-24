@@ -44,6 +44,7 @@ flowchart TB
     subgraph SchedulerDaemons["Background Automation Daemons"]
         Reaper["💀 Zombie Worker & Lease Reaper"]
         CronDispatcher["⏰ Cron Recurring Dispatcher"]
+        Promoter["⚡ Scheduled Job Promoter (scheduled -> queued)"]
         AIDiagnostics["🧠 AI Failure Root Cause Engine"]
     end
 
@@ -63,6 +64,7 @@ flowchart TB
 
     Reaper -->|Scan Expired Leases| Postgres
     CronDispatcher -->|Evaluate Cron & Dispatch| Postgres
+    Promoter -->|Promote Due Scheduled Jobs SKIP LOCKED| Postgres
     AIDiagnostics -->|Diagnose Exceptions| Postgres
 ```
 
