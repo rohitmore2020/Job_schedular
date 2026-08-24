@@ -34,70 +34,79 @@
 
 ```mermaid
 flowchart TB
-    %% ================= GLOBAL STYLING =================
-    classDef clientStyle fill:#0B132B,stroke:#00E5FF,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef gatewayStyle fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef apiStyle fill:#1E1B4B,stroke:#818CF8,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef pgStyle fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef workerStyle fill:#312E81,stroke:#C084FC,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef daemonStyle fill:#4C0519,stroke:#FB7185,stroke-width:2px,color:#E2E8F0,font-weight:bold;
-    classDef featureStyle fill:#022C22,stroke:#34D399,stroke-width:1px,color:#A7F3D0;
+    %% ================= THEME CLASS DEFINITIONS =================
+    classDef default fill:#0D172A,stroke:#38BDF8,stroke-width:1.5px,color:#F1F5F9,font-family:Inter,sans-serif;
+    classDef client fill:#0B132B,stroke:#00E5FF,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef gateway fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef api fill:#131B36,stroke:#818CF8,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef postgres fill:#062C24,stroke:#10B981,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef worker fill:#1E1B4B,stroke:#C084FC,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef daemon fill:#2D0612,stroke:#FB7185,stroke-width:2px,color:#FFFFFF,font-weight:600;
+    classDef feature fill:#081E19,stroke:#34D399,stroke-width:1px,color:#A7F3D0;
+    classDef dbCore fill:#033A2D,stroke:#059669,stroke-width:3px,color:#6EE7B7,font-weight:700;
 
     %% ================= TIER 1: CLIENTS =================
-    subgraph TIER1["🎨 1. CLIENT & CONSUMER LAYER"]
-        Browser["💻 React 19 Dashboard<br/><i>(Live Telemetry & Controls)</i>"]:::clientStyle
-        Microservices["⚡ External Microservices<br/><i>(REST Ingestion)</i>"]:::clientStyle
-        WSSubscribers["📡 WebSocket Subscribers<br/><i>(Live Event Feed)</i>"]:::clientStyle
+    subgraph TIER1["🎨 1. CLIENT & CONSUMER TIER"]
+        Browser["💻 React 19 Web Dashboard<br/><i>(Live Telemetry, Charts & Controls)</i>"]:::client
+        Microservices["⚡ External Microservices<br/><i>(High-Throughput REST Ingest)</i>"]:::client
+        WSSubscribers["📡 WebSocket Subscribers<br/><i>(Real-Time Broadcast Stream)</i>"]:::client
     end
+    style TIER1 fill:#080E1A,stroke:#00E5FF,stroke-width:1px,stroke-dasharray: 4 4,color:#00E5FF
 
     %% ================= TIER 2: GATEWAY =================
-    subgraph TIER2["🌐 2. INGRESS & REVERSE PROXY LAYER"]
-        Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 & WebSocket Upgrade Passthrough</i>"]:::gatewayStyle
+    subgraph TIER2["🌐 2. INGRESS & REVERSE PROXY TIER"]
+        Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
     end
+    style TIER2 fill:#080E1A,stroke:#38BDF8,stroke-width:1px,stroke-dasharray: 4 4,color:#38BDF8
 
     %% ================= TIER 3: CONTROL PLANE =================
-    subgraph TIER3["⚡ 3. API CONTROL PLANE (FastAPI Cluster :8000)"]
-        API["🚀 FastAPI Async REST Router"]:::apiStyle
-        Auth["🔒 JWT & RBAC Engine<br/><i>(Admin / Dev / Viewer)</i>"]:::apiStyle
-        WSManager["📡 WebSocket Broadcast Hub"]:::apiStyle
-        Telemetry["📊 Telemetry & KPI Engine"]:::apiStyle
+    subgraph TIER3["⚡ 3. CONTROL PLANE (FastAPI Cluster :8000)"]
+        API["🚀 FastAPI Async REST Router"]:::api
+        Auth["🔒 JWT & RBAC Engine<br/><i>(Admin / Developer / Viewer)</i>"]:::api
+        WSManager["📡 WebSocket Broadcast Hub"]:::api
+        Telemetry["📊 Telemetry & Observability Engine"]:::api
     end
+    style TIER3 fill:#080E1A,stroke:#818CF8,stroke-width:1px,stroke-dasharray: 4 4,color:#818CF8
 
     %% ================= TIER 4: PERSISTENCE LAYER =================
-    subgraph TIER4["🗄️ 4. ACID PERSISTENCE & COORDINATION CORE (PostgreSQL 16)"]
-        Postgres[("🐘 PostgreSQL 16 ACID Engine")]:::pgStyle
-        subgraph PGFeatures["Transactional Primitives & Structures"]
-            SkipLocked["⚡ FOR UPDATE SKIP LOCKED<br/><i>(Zero-Collision Atomic Claiming)</i>"]:::featureStyle
-            Fencing["🛡️ Monotonic Lease Fencing<br/><i>(Zombie Protection)</i>"]:::featureStyle
-            Batches["📦 Batch Coordinator<br/><i>(Live Progress Aggregation)</i>"]:::featureStyle
-            PartialIdx["⚡ Partial B-Tree Indexes<br/><i>(Sub-ms Status Lookups)</i>"]:::featureStyle
-            Idemp["🔑 Idempotency Store<br/><i>(Deduplication Records)</i>"]:::featureStyle
+    subgraph TIER4["🗄️ 4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
+        Postgres[("🐘 PostgreSQL 16 ACID Engine")]:::dbCore
+        subgraph PGFeatures["Transactional Primitives & Storage Structures"]
+            SkipLocked["⚡ FOR UPDATE SKIP LOCKED<br/><i>(Atomic Zero-Collision Claiming)</i>"]:::feature
+            Fencing["🛡️ Monotonic Lease Fencing<br/><i>(Split-Brain Zombie Protection)</i>"]:::feature
+            Batches["📦 Batch Coordinator<br/><i>(Aggregated Live Progress)</i>"]:::feature
+            PartialIdx["⚡ Partial B-Tree Indexes<br/><i>(Sub-millisecond Polling)</i>"]:::feature
+            Idemp["🔑 Idempotency Store<br/><i>(At-Least-Once Deduplication)</i>"]:::feature
         end
     end
+    style TIER4 fill:#080E1A,stroke:#10B981,stroke-width:1px,stroke-dasharray: 4 4,color:#10B981
+    style PGFeatures fill:#061D17,stroke:#059669,stroke-width:1px,color:#34D399
 
     %% ================= TIER 5: WORKER FLEET =================
-    subgraph TIER5["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Node Fleet)"]
-        Worker1["Node 1 Daemon"]:::workerStyle
-        Worker2["Node 2 Daemon"]:::workerStyle
-        WorkerN["Node N Daemon"]:::workerStyle
+    subgraph TIER5["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
+        Worker1["Node 1 Daemon"]:::worker
+        Worker2["Node 2 Daemon"]:::worker
+        WorkerN["Node N Daemon"]:::worker
         
-        Runner["📦 Sandboxed Task Runner"]:::workerStyle
-        RateLimiter["🪣 Token-Bucket Rate Limiter"]:::workerStyle
-        DAG["⛓️ DAG Dependency Cascade"]:::workerStyle
+        Runner["📦 Sandboxed Task Runner"]:::worker
+        RateLimiter["🪣 Token-Bucket Rate Limiter"]:::worker
+        DAG["⛓️ DAG Dependency Resolver"]:::worker
     end
+    style TIER5 fill:#080E1A,stroke:#C084FC,stroke-width:1px,stroke-dasharray: 4 4,color:#C084FC
 
     %% ================= TIER 6: BACKGROUND DAEMONS =================
-    subgraph TIER6["🤖 6. AUTONOMOUS BACKGROUND DAEMONS"]
-        Promoter["🕒 ScheduledJobPromoter<br/><i>(Atomic delayed ➔ queued promotion)</i>"]:::daemonStyle
-        Reaper["💀 Lease Reaper<br/><i>(Dead worker recovery & requeue)</i>"]:::daemonStyle
-        Cron["⏰ Cron Dispatcher<br/><i>(Deterministic 5-part cron evaluator)</i>"]:::daemonStyle
-        AIDiag["🧠 AI Diagnostics<br/><i>(Google Gemini / OpenAI LLM RCA)</i>"]:::daemonStyle
+    subgraph TIER6["🤖 6. AUTONOMOUS AUTOMATION DAEMONS"]
+        Promoter["🕒 ScheduledJobPromoter<br/><i>(Atomic delayed ➔ queued promotion)</i>"]:::daemon
+        Reaper["💀 Lease Reaper<br/><i>(Dead worker recovery & requeue)</i>"]:::daemon
+        Cron["⏰ Cron Dispatcher<br/><i>(Deterministic 5-part cron evaluator)</i>"]:::daemon
+        AIDiag["🧠 AI Diagnostics<br/><i>(Google Gemini / OpenAI LLM RCA)</i>"]:::daemon
     end
+    style TIER6 fill:#080E1A,stroke:#FB7185,stroke-width:1px,stroke-dasharray: 4 4,color:#FB7185
 
     %% ================= DATA FLOW CONNECTIONS =================
     Browser -->|HTTP / JSON| Nginx
-    Microservices -->|REST API Requests| Nginx
-    WSSubscribers <-->|WSS: Connection Upgrade| Nginx
+    Microservices -->|REST Ingestion| Nginx
+    WSSubscribers <-->|WSS: Live Stream| Nginx
 
     Nginx -->|Route /api/| API
     Nginx <-->|Route /api/v1/ws| WSManager
@@ -109,16 +118,16 @@ flowchart TB
 
     Worker1 & Worker2 & WorkerN -->|1. Atomic Poll FOR UPDATE SKIP LOCKED| Postgres
     Worker1 & Worker2 & WorkerN -->|2. Heartbeat Telemetry & Lease Renewal| Postgres
-    Worker1 & Worker2 & WorkerN -->|3. Record Executions, Logs & DLQ| Postgres
+    Worker1 & Worker2 & WorkerN -->|3. Execution Logs & DLQ Escalation| Postgres
 
     Runner --- Worker1 & Worker2 & WorkerN
     RateLimiter --- Runner
     DAG --- Runner
 
     Promoter -->|Promote Due Scheduled Tasks| Postgres
-    Reaper -->|Scan Expired Leases & Reclaim| Postgres
+    Reaper -->|Reclaim Expired Leases| Postgres
     Cron -->|Dispatch Idempotent Recurring Jobs| Postgres
-    AIDiag -->|Analyze Stack Traces on DLQ| Postgres
+    AIDiag -->|Generate Failure RCA| Postgres
 ```
 
 ---
