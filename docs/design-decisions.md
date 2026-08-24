@@ -228,6 +228,28 @@ JobBatch (batch_id: UUID)
    - `POST /api/v1/batches/{id}/cancel` (cancels all pending/queued child jobs)
    - `POST /api/v1/batches/{id}/retry` (re-enqueues failed/DLQ child jobs)
 
+---
+
+## 11. Handling the CLAIMED State: Atomic Transition (`QUEUED -> RUNNING`)
+
+### Architectural Rationale
+The scheduler uses an atomic database claim that acquires ownership and transitions the job directly from `QUEUED` to `RUNNING`. A persistent `CLAIMED` state is intentionally avoided because it would introduce an unnecessary intermediate state and additional recovery complexity.
+
+```
+┌──────────┐   Atomic Poll CTE (SKIP LOCKED)   ┌───────────┐   Runner Finished   ┌─────────────┐
+│  QUEUED  │ ─────────────────────────────────> │  RUNNING  │ ──────────────────> │  COMPLETED  │
+└──────────┘  - Sets status = 'running'         └───────────┘  - Status = 'completed' └─────────────┘
+              - Assigns locked_by_worker_id                    - Releases lease
+              - Stamps lease_token (UUID)
+              - Sets lock_expires_at (NOW + 30s)
+```
+
+### Engineering Trade-Off Analysis
+1. **Single-Transaction State Transition:** In PostgreSQL, combining row selection (`FOR UPDATE SKIP LOCKED`) and state update (`status = 'running'`) in a single CTE minimizes round-trips to the database and eliminates partial claim states.
+2. **Elimination of Zombie Claim Recovery:** A separate persistent `CLAIMED` status would require a dedicated "claim timeout reaper" separate from the execution "lease reaper". By immediately stamping a lease token and setting `status = 'running'` with `lock_expires_at = NOW() + 30s`, the standard **Lease Reaper** and **Fencing Token Mechanism** manage all crash recovery seamlessly under one unified invariant.
+3. **Compatibility:** `JobStatus.CLAIMED` remains in the schema enum for backwards compatibility and external integrations, while the internal high-performance worker engine utilizes the streamlined zero-overhead transition.
+
+
 
 
 
