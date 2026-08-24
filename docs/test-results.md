@@ -9,14 +9,14 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 71
-- **Passed:** 71
+- **Total tests:** 73
+- **Passed:** 73
 - **Failed:** 0
 - **Skipped:** 0
 - **Coverage:** 71%
 
 ```
-======================== 71 passed, 1 warning in 34.70s ========================
+======================== 73 passed, 1 warning in 34.29s ========================
 ```
 
 ### 📋 Test Suite Breakdown
@@ -39,6 +39,7 @@
 | `tests/test_day16_telemetry_observability.py` | System KPI rates, queue depth & wait time metrics, fleet heartbeat age, per-job latency breakdowns | 4/4 | ✅ PASSED |
 | `tests/test_day17_delayed_promoter.py` | Delayed job execution lifecycle, batch promotion, multi-promoter HA race protection, scheduled job concurrency race | 4/4 | ✅ PASSED |
 | `tests/test_distributed_stress_and_races.py` | Mutual exclusion (2 workers/1 job), 100 jobs/5 workers drain, concurrency limit invariant ($\le 3$), worker crash recovery & fencing, 100-burst idempotency, 3-node HA scheduler race | 6/6 | ✅ PASSED |
+| `tests/test_worker_leases_and_recovery.py` | Normal lease lifecycle (Claim -> Lease -> Heartbeat -> Renew -> Complete), Crash recovery (Heartbeat stops -> Worker DEAD -> Lease expires -> Reaper -> Job requeued) | 2/2 | ✅ PASSED |
 
 ### 📈 Code Coverage by Module
 
