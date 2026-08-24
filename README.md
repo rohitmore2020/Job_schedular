@@ -12,21 +12,17 @@
 
 ---
 
-## 📸 System Overview & Web Dashboard
+## 📸 System Overview & Web Dashboard Modules
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                                CODITY SCHEDULER                                        │
-├───────────────────┬────────────────────────────────────────────────────────────────────┤
-│ 📊 System KPI     │ Live throughput (jobs/s), success/failure rates, queue wait times  │
-│ ⚡ Active Queues   │ Concurrency limit controls, pause/resume state toggles             │
-│ 📋 Job Stream     │ Real-time execution stream, search filters, terminal drawer logs  │
-│ 📦 Batch Engine   │ Live progress tracking (75/100 completed), batch cancel & retry    │
-│ 💀 DLQ Incident   │ Dead letter queue with tracebacks, AI diagnostics & 1-click replay │
-│ ⏰ Cron Schedules │ 5-part recurring cron evaluator with deterministic logical keys    │
-│ 🖥️ Worker Fleet   │ Node heartbeats, CPU% & Memory (MB) timeseries, health status      │
-└───────────────────┴────────────────────────────────────────────────────────────────────┘
-```
+| View / Module | Key Telemetry & Interactive Capabilities | Live Dashboard Feature |
+| :--- | :--- | :--- |
+| **📊 Overview & KPIs** | Live throughput (`jobs/s`), success & failure rates, average queue wait times, and system-wide telemetry charts | Real-time Recharts visual analytics |
+| **⚡ Queue Manager** | Concurrency limit sliders, live slot utilization gauge bars, and instant 1-click pause/resume toggles | Dynamic rate & concurrency control |
+| **📋 Job Stream** | Live execution feed, full-text search, status filters (`queued`, `running`, `completed`, `failed`), and slide-in terminal log drawer | Per-job execution latency breakdowns |
+| **📦 Batch Orchestrator** | Real-time progress bars (`75/100 completed, 3 failed`), batch status aggregation, batch-wide cancellation, and retry | Bulk task coordination |
+| **💀 DLQ Incident Center** | Stack trace capture, Google Gemini / OpenAI failure root-cause analysis, and 1-click replay / bulk redrive | Automated failure recovery |
+| **⏰ Cron Schedules** | 5-part cron syntax parser, next-fire execution previews, pause/resume schedules, and manual test dispatch triggers | Deterministic idempotent recurring jobs |
+| **🖥️ Worker Fleet** | Real-time node heartbeat liveness, health status badges (`IDLE`, `BUSY`, `DEAD`), and live CPU% & Memory (MB) timeseries | Fleet monitoring & auto-reaper status |
 
 ---
 
