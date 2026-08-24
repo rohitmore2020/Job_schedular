@@ -12,7 +12,11 @@
 
 ---
 
-## 📸 System Overview & Web Dashboard Modules
+## 📸 System Overview & Web Dashboard
+
+![Codity Distributed Job Scheduler Web Dashboard](docs/assets/dashboard_preview.png)
+
+### 🖥️ Dashboard Modules & Capabilities
 
 | View / Module | Key Telemetry & Interactive Capabilities | Live Dashboard Feature |
 | :--- | :--- | :--- |
