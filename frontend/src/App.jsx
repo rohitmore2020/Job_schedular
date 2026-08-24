@@ -1,18 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import OverviewView from './components/OverviewView';
-import QueuesView from './components/QueuesView';
-import JobsView from './components/JobsView';
-import BatchesView from './components/BatchesView';
-import DLQView from './components/DLQView';
-import SchedulesView from './components/SchedulesView';
-import WorkersView from './components/WorkersView';
-import SubmitJobModal from './components/SubmitJobModal';
-import JobDetailDrawer from './components/JobDetailDrawer';
-import AuthModal from './components/AuthModal';
-import ProjectModal from './components/ProjectModal';
 import { apiClient } from './api/client';
+
+// Lazy loaded views for optimal chunk splitting
+const OverviewView = lazy(() => import('./components/OverviewView'));
+const QueuesView = lazy(() => import('./components/QueuesView'));
+const JobsView = lazy(() => import('./components/JobsView'));
+const BatchesView = lazy(() => import('./components/BatchesView'));
+const DLQView = lazy(() => import('./components/DLQView'));
+const SchedulesView = lazy(() => import('./components/SchedulesView'));
+const WorkersView = lazy(() => import('./components/WorkersView'));
+const SubmitJobModal = lazy(() => import('./components/SubmitJobModal'));
+const JobDetailDrawer = lazy(() => import('./components/JobDetailDrawer'));
+const AuthModal = lazy(() => import('./components/AuthModal'));
+const ProjectModal = lazy(() => import('./components/ProjectModal'));
+
+function ViewLoader() {
+  return (
+    <div className="flex items-center justify-center h-64 text-slate-400">
+      <div className="flex items-center space-x-3">
+        <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-sm font-medium">Loading view...</span>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('access_token')));
@@ -192,93 +205,97 @@ export default function App() {
 
         {/* Scrollable View Container */}
         <main className="flex-1 p-8 overflow-y-auto">
-          {currentTab === 'overview' && (
-            <OverviewView
-              queues={queues}
-              jobs={jobs}
-              workers={workers}
-              dlqCount={dlqCount}
-              selectedProject={selectedProject}
-              onInspectJob={(id) => setInspectJobId(id)}
-            />
-          )}
+          <Suspense fallback={<ViewLoader />}>
+            {currentTab === 'overview' && (
+              <OverviewView
+                queues={queues}
+                jobs={jobs}
+                workers={workers}
+                dlqCount={dlqCount}
+                selectedProject={selectedProject}
+                onInspectJob={(id) => setInspectJobId(id)}
+              />
+            )}
 
-          {currentTab === 'queues' && (
-            <QueuesView
-              queues={queues}
-              selectedProject={selectedProject}
-              onRefresh={refreshData}
-            />
-          )}
+            {currentTab === 'queues' && (
+              <QueuesView
+                queues={queues}
+                selectedProject={selectedProject}
+                onRefresh={refreshData}
+              />
+            )}
 
-          {currentTab === 'jobs' && (
-            <JobsView
-              jobs={jobs}
-              queues={queues}
-              selectedQueueId={selectedQueueId}
-              setSelectedQueueId={setSelectedQueueId}
-              onInspectJob={(id) => setInspectJobId(id)}
-              onRefresh={refreshData}
-            />
-          )}
+            {currentTab === 'jobs' && (
+              <JobsView
+                jobs={jobs}
+                queues={queues}
+                selectedQueueId={selectedQueueId}
+                setSelectedQueueId={setSelectedQueueId}
+                onInspectJob={(id) => setInspectJobId(id)}
+                onRefresh={refreshData}
+              />
+            )}
 
-          {currentTab === 'batches' && (
-            <BatchesView />
-          )}
+            {currentTab === 'batches' && (
+              <BatchesView />
+            )}
 
-          {currentTab === 'dlq' && (
-            <DLQView
-              queues={queues}
-              selectedQueueId={selectedQueueId}
-              setSelectedQueueId={setSelectedQueueId}
-              onInspectJob={(id) => setInspectJobId(id)}
-            />
-          )}
+            {currentTab === 'dlq' && (
+              <DLQView
+                queues={queues}
+                selectedQueueId={selectedQueueId}
+                setSelectedQueueId={setSelectedQueueId}
+                onInspectJob={(id) => setInspectJobId(id)}
+              />
+            )}
 
-          {currentTab === 'schedules' && (
-            <SchedulesView
-              queues={queues}
-              selectedQueueId={selectedQueueId}
-              selectedProject={selectedProject}
-              onRefresh={refreshData}
-            />
-          )}
+            {currentTab === 'schedules' && (
+              <SchedulesView
+                queues={queues}
+                selectedQueueId={selectedQueueId}
+                selectedProject={selectedProject}
+                onRefresh={refreshData}
+              />
+            )}
 
-          {currentTab === 'workers' && (
-            <WorkersView
-              workers={workers}
-              onRefresh={refreshData}
-            />
-          )}
+            {currentTab === 'workers' && (
+              <WorkersView
+                workers={workers}
+                onRefresh={refreshData}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
 
-      {/* Submit Job Modal */}
-      <SubmitJobModal
-        isOpen={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        queues={queues}
-        selectedQueueId={selectedQueueId}
-        onJobSubmitted={refreshData}
-      />
+      <Suspense fallback={null}>
+        {/* Submit Job Modal */}
+        <SubmitJobModal
+          isOpen={showSubmitModal}
+          onClose={() => setShowSubmitModal(false)}
+          queues={queues}
+          selectedQueueId={selectedQueueId}
+          onJobSubmitted={refreshData}
+        />
 
-      {/* Project Management & Multi-Tenancy Modal */}
-      <ProjectModal
-        isOpen={showProjectModal}
-        onClose={() => setShowProjectModal(false)}
-        user={user}
-        projects={projects}
-        selectedProject={selectedProject}
-        onProjectCreated={handleProjectCreated}
-        onProjectUpdated={handleProjectUpdated}
-      />
+        {/* Project Management & Multi-Tenancy Modal */}
+        <ProjectModal
+          isOpen={showProjectModal}
+          onClose={() => setShowProjectModal(false)}
+          user={user}
+          projects={projects}
+          selectedProject={selectedProject}
+          onProjectCreated={handleProjectCreated}
+          onProjectUpdated={handleProjectUpdated}
+        />
 
-      {/* Job Detail & Log Inspector Drawer */}
-      <JobDetailDrawer
-        jobId={inspectJobId}
-        onClose={() => setInspectJobId(null)}
-        onRefresh={refreshData}
-      />
+        {/* Job Detail & Log Inspector Drawer */}
+        <JobDetailDrawer
+          jobId={inspectJobId}
+          onClose={() => setInspectJobId(null)}
+          onRefresh={refreshData}
+        />
+      </Suspense>
     </div>
   );
 }

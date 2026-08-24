@@ -185,6 +185,18 @@ export default function DLQView({ queues, selectedQueueId, setSelectedQueueId, o
                 {/* Expanded Stack Trace */}
                 {isExpanded && (
                   <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-3 text-xs">
+                    {item.ai_failure_summary && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1 text-[11px] font-semibold text-purple-400 uppercase tracking-wider">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                          <span>AI Root-Cause Diagnostic:</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-purple-950/20 border border-purple-800/40 text-purple-200 font-mono text-[11px] whitespace-pre-wrap">
+                          {item.ai_failure_summary}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                         Captured Python Traceback:

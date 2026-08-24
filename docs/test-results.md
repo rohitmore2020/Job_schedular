@@ -46,6 +46,33 @@
 | `tests/test_worker_leases_and_recovery.py` | Normal lease lifecycle (Claim -> Lease -> Heartbeat -> Renew -> Complete), Crash recovery (Heartbeat stops -> Worker DEAD -> Lease expires -> Reaper -> Job requeued) | 2/2 | ✅ PASSED |
 | `tests/test_zombie_worker_fencing.py` | Zombie worker split-brain defense: Worker A frozen $\to$ Worker B reclaims & completes (SUCCESS) $\to$ Zombie Worker A wakes & attempts completion (REJECTED/KILLED) | 1/1 | ✅ PASSED |
 
+---
+
+## 0.2.1 Frontend UI Runtime Tests & Bundle Splitting Optimization
+
+### 📦 Optimized Chunk Breakdown (`npm run build`)
+- **Initial App Entry Bundle:** `17.52 kB` (Gzip: `5.67 kB`) — *Down from 719 kB (97.5% reduction)*
+- **Rollup Vendor Chunks:** `vendor-react` (`186 kB`), `vendor-charts` (`375 kB`), `vendor-network` (`47 kB`), `vendor-common` (`3.5 kB`)
+- **Route/View Lazy Chunks:** `OverviewView` (`13.8 kB`), `JobsView` (`6.9 kB`), `DLQView` (`6.8 kB`), `QueuesView` (`8.6 kB`), `WorkersView` (`8.5 kB`), `BatchesView` (`8.3 kB`), `SchedulesView` (`7.6 kB`)
+- **Modal Lazy Chunks:** `ProjectModal` (`11.5 kB`), `JobDetailDrawer` (`9.2 kB`), `SubmitJobModal` (`8.1 kB`), `AuthModal` (`6.1 kB`)
+- **Oversized Chunk Warnings:** `0` (Zero warnings across build pipeline)
+
+### 🧪 Frontend Component & Runtime Test Suite (`vitest run`)
+
+| UI Test File | Components & Behaviors Tested | Passed | Status |
+| :--- | :--- | :---: | :---: |
+| `src/test/Sidebar.test.jsx` | Brand identity, tab switching, DLQ badge count, trigger Submit modal | 3/3 | ✅ PASSED |
+| `src/test/Header.test.jsx` | Active project selector, live WebSocket streaming badge vs reconnecting state, refresh trigger | 2/2 | ✅ PASSED |
+| `src/test/OverviewView.test.jsx` | System KPIs (Throughput, Success/Failure rates, DLQ rate), live fleet telemetry | 1/1 | ✅ PASSED |
+| `src/test/QueuesView.test.jsx` | Queue listing, priority rendering, concurrency utilization bars, pause/resume controls | 2/2 | ✅ PASSED |
+| `src/test/JobsView.test.jsx` | Jobs execution stream, status badges, priority scores, inspect drawer trigger | 2/2 | ✅ PASSED |
+| `src/test/DLQView.test.jsx` | Incident listing, traceback accordion expansion, AI failure diagnostic card, 1-click replay redrive | 2/2 | ✅ PASSED |
+| `src/test/WorkersView.test.jsx` | Worker fleet nodes, health badges (BUSY, IDLE, DEAD), live CPU/Memory timeseries charts | 1/1 | ✅ PASSED |
+| `src/test/BatchesView.test.jsx` | Batch progress aggregation, status filtering, completed/failed/pending breakdowns | 1/1 | ✅ PASSED |
+| `src/test/SchedulesView.test.jsx` | Recurring cron schedules, 5-part cron syntax badges, pause/resume recurring jobs | 1/1 | ✅ PASSED |
+| `src/test/SubmitJobModal.test.jsx` | Modal visibility, queue selector, task handler presets, single & batch job submissions | 2/2 | ✅ PASSED |
+| **Total Frontend Tests** | **10 test suites / 17 tests** | **17/17** | **✅ PASSED** |
+
 ### 📈 Code Coverage by Module
 
 ```
