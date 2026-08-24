@@ -249,6 +249,51 @@ The scheduler uses an atomic database claim that acquires ownership and transiti
 2. **Elimination of Zombie Claim Recovery:** A separate persistent `CLAIMED` status would require a dedicated "claim timeout reaper" separate from the execution "lease reaper". By immediately stamping a lease token and setting `status = 'running'` with `lock_expires_at = NOW() + 30s`, the standard **Lease Reaper** and **Fencing Token Mechanism** manage all crash recovery seamlessly under one unified invariant.
 3. **Compatibility:** `JobStatus.CLAIMED` remains in the schema enum for backwards compatibility and external integrations, while the internal high-performance worker engine utilizes the streamlined zero-overhead transition.
 
+---
+
+## 12. Worker Graceful Shutdown & In-Flight Draining (`SIGTERM` / `SIGINT`)
+
+### Operational Challenge
+In cloud environments (Kubernetes, Docker Swarm, rolling deployments), worker pods are frequently restarted, updated, or scaled down. Abruptly terminating workers results in interrupted jobs, wasted compute, and unnecessary lease timeouts.
+
+### Graceful Shutdown Sequence
+When a worker daemon receives a termination signal (`SIGTERM` or `SIGINT`), it initiates a zero-drop draining protocol:
+
+```
+Worker receives SIGTERM / SIGINT
+       │
+       ▼
+1. Stop accepting new jobs
+   • `is_running = False` immediately halts the queue polling loop.
+   • Unclaimed jobs in `QUEUED` status are left untouched for healthy workers.
+       │
+       ▼
+2. Heartbeat status = DRAINING
+   • Sets `Worker.status = WorkerStatus.DRAINING` in the database.
+   • Heartbeat emitter continues renewing in-flight job leases and broadcasting telemetry.
+   • Dashboard displays yellow "DRAINING" badge for real-time operator visibility.
+       │
+       ▼
+3. Finish active in-flight jobs
+   • Daemon calls `await asyncio.gather(*self._active_tasks, return_exceptions=True)`.
+   • Every in-flight task executes to completion and records audit logs and output payloads.
+       │
+       ▼
+4. Stop heartbeat emitter & release resources
+   • Heartbeat background task cancelled.
+       │
+       ▼
+5. Exit
+   • Sets `Worker.status = WorkerStatus.DEAD` in database.
+   • Process exits cleanly with exit code 0.
+```
+
+### Guarantees
+1. **Zero Aborted Tasks:** Jobs currently being processed are guaranteed to finish before the process terminates.
+2. **Zero Orphaned Claims:** No new jobs are claimed once the shutdown signal is received.
+3. **Immediate Operator Observability:** The cluster immediately distinguishes between a dying worker (`DRAINING`) and a hard-crashed worker (`DEAD`).
+
+
 
 
 

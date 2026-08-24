@@ -131,6 +131,9 @@ class WorkerDaemon:
 
         while self.is_running:
             await self.semaphore.acquire()
+            if not self.is_running:
+                self.semaphore.release()
+                break
 
             try:
                 async with AsyncSessionLocal() as session:
@@ -158,21 +161,51 @@ class WorkerDaemon:
                 await asyncio.sleep(self.poll_interval)
 
     async def stop(self):
-        """Gracefully stop worker, drain active tasks, and halt heartbeat."""
-        logger.info(f"🛑 Worker '{self.worker_id}' received shutdown signal. Draining active tasks...")
+        """
+        Graceful shutdown sequence:
+        1. Stop accepting/polling new jobs (is_running = False)
+        2. Transition status to DRAINING in database & emit draining heartbeat
+        3. Finish active in-flight tasks (await _active_tasks)
+        4. Stop heartbeat emitter
+        5. Mark worker status = DEAD on exit
+        """
+        logger.info(f"🛑 Worker '{self.worker_id}' received shutdown signal (SIGTERM/SIGINT). Transitioning to DRAINING...")
         self.is_running = False
-        await self.heartbeat_emitter.stop()
 
+        # 1. Update database status to DRAINING
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(Worker)
+                .where(Worker.worker_id == self.worker_id)
+            )
+            res = await session.execute(stmt)
+            worker = res.scalar_one_or_none()
+            if worker:
+                worker.status = WorkerStatus.DRAINING
+                await session.commit()
+
+        # 2. Emit draining heartbeat
+        try:
+            await self.heartbeat_emitter.emit_once()
+        except Exception as e:
+            logger.warning(f"Could not emit draining heartbeat: {e}")
+
+        # 3. Wait for in-flight tasks to finish completely
         if self._active_tasks:
-            logger.info(f"⏳ Waiting for {len(self._active_tasks)} in-flight tasks to complete...")
+            logger.info(f"⏳ Draining {len(self._active_tasks)} in-flight tasks to completion...")
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
+        # 4. Stop heartbeat emitter
+        await self.heartbeat_emitter.stop()
+
+        # 5. Mark worker status as DEAD on final exit
         async with AsyncSessionLocal() as session:
             stmt = select(Worker).where(Worker.worker_id == self.worker_id)
             res = await session.execute(stmt)
             worker = res.scalar_one_or_none()
             if worker:
                 worker.status = WorkerStatus.DEAD
+                worker.current_active_jobs = 0
                 await session.commit()
 
-        logger.info(f"👋 Worker '{self.worker_id}' shutdown complete.")
+        logger.info(f"👋 Worker '{self.worker_id}' graceful shutdown complete.")
