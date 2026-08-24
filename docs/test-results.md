@@ -9,20 +9,21 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 92
-- **Passed:** 92
+- **Total tests:** 96
+- **Passed:** 96
 - **Failed:** 0
 - **Skipped:** 0
-- **Coverage:** 72%
+- **Coverage:** 73%
 
 ```
-======================== 92 passed, 1 warning in 37.76s ========================
+======================== 96 passed, 1 warning in 37.25s ========================
 ```
 
 ### 📋 Test Suite Breakdown
 
 | Test File | Scenarios Tested | Passed | Status |
 | :--- | :--- | :---: | :---: |
+| `tests/test_ai_llm_diagnostics.py` | Gemini LLM integration, OpenAI API integration, network/API failure fallback, offline zero-key rule engine | 4/4 | ✅ PASSED |
 | `tests/test_atomic_claiming.py` | 100 jobs across 5 concurrent workers (100 unique executions, 0 duplicates), 10-worker collision storm | 2/2 | ✅ PASSED |
 | `tests/test_day1_setup.py` | DB connectivity, `/health`, `/` root endpoint | 3/3 | ✅ PASSED |
 | `tests/test_day2_models.py` | Org/Project/User hierarchy, queue retry policy, idempotency constraints, job execution lifecycle | 5/5 | ✅ PASSED |
