@@ -25,9 +25,11 @@ Official pre-built, production-ready images are published and maintained on [Doc
 
 ---
 
-## System Overview & Web Dashboard
+## System Overview & Interactive Walkthrough
 
-![Codity Distributed Job Scheduler Web Dashboard](docs/assets/dashboard_preview.png)
+![Codity Distributed Job Scheduler Live Interactive Demo](docs/assets/demo_walkthrough.gif)
+
+> 💡 **Live Interactive Walkthrough:** Demonstrating 1-click admin authentication, real-time throughput KPI streaming, dynamic queue concurrency tuning, batch orchestration, execution audit terminal drawer, AI root-cause failure diagnostics in DLQ, and live worker fleet heartbeat telemetry.
 
 ### Dashboard Modules & Capabilities
 
