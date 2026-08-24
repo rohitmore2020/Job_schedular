@@ -1,31 +1,31 @@
 # ⚡ Codity Distributed Job Scheduler Platform
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://reactjs.org)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-101%2F101%20Passing-brightgreen?style=flat&logo=pytest)](https://pytest.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16_ACID-316192?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose_Verified-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
+[![Tests Passing](https://img.shields.io/badge/Tests-101%2F101_Passing-brightgreen?style=flat-square&logo=pytest)](https://pytest.org)
+[![Coverage](https://img.shields.io/badge/Coverage-74%25-informational?style=flat-square)](docs/test-results.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler with ACID transactional claiming (`FOR UPDATE SKIP LOCKED`), queue-level serialization, lease fencing tokens against split-brain zombie workers, first-class batch orchestration with live aggregated progress, deterministic logical keys for race-free cron dispatching, dedicated ScheduledJobPromoter for race-free delayed task promotion (`scheduled -> queued`), at-least-once execution semantics with side-effect idempotency, hierarchical RBAC (Owner/Admin, Developer/Member, Viewer), end-to-end full-stack observability (System KPIs, Queue Depths & Wait Times, Worker Fleet Liveness & Heartbeats, Per-Job Latency Breakdowns), exhaustive distributed integration & stress race-condition verification, worker telemetry heartbeats, automated zombie lease recovery, Dead Letter Queue redrive, DAG workflow dependencies, token-bucket rate limiting, and a Codity.ai-inspired dark cybernetic web dashboard.**
+> **A high-throughput, fault-tolerant, multi-tenant distributed job scheduler built on PostgreSQL ACID transactions (`FOR UPDATE SKIP LOCKED`). Features atomic queue claiming, lease fencing tokens against split-brain zombie workers, first-class batch orchestration, DAG dependency workflows, recurring cron scheduling, real-time WebSocket event streaming, AI-powered root-cause failure diagnostics, and a dark cybernetic dashboard.**
 
 ---
 
-## 📸 Web Dashboard Preview (Codity.ai Theme)
+## 📸 System Overview & Web Dashboard
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        CODITY SCHEDULER                                │
-├──────────────┬─────────────────────────────────────────────────────────┤
-│ 📊 Overview  │ Live KPIs, Recharts throughput & millisecond latency    │
-│ ⚡ Queues     │ Concurrency limit sliders, pause/resume toggles         │
-│ 📋 Jobs      │ Searchable job explorer, slide-in terminal log drawer   │
-│ 📦 Batches   │ Live progress bars (75% completed), batch cancel/retry  │
-│ 💀 DLQ       │ Dead Letter Queue incident center with 1-click replay   │
-│ ⏰ Cron       │ 5-part recurring schedule manager & next-fire preview   │
-│ 🖥️ Fleet      │ Worker telemetry, CPU % & Memory (MB) time-series       │
-└──────────────┴─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                CODITY SCHEDULER                                        │
+├───────────────────┬────────────────────────────────────────────────────────────────────┤
+│ 📊 System KPI     │ Live throughput (jobs/s), success/failure rates, queue wait times  │
+│ ⚡ Active Queues   │ Concurrency limit controls, pause/resume state toggles             │
+│ 📋 Job Stream     │ Real-time execution stream, search filters, terminal drawer logs  │
+│ 📦 Batch Engine   │ Live progress tracking (75/100 completed), batch cancel & retry    │
+│ 💀 DLQ Incident   │ Dead letter queue with tracebacks, AI diagnostics & 1-click replay │
+│ ⏰ Cron Schedules │ 5-part recurring cron evaluator with deterministic logical keys    │
+│ 🖥️ Worker Fleet   │ Node heartbeats, CPU% & Memory (MB) timeseries, health status      │
+└───────────────────┴────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -35,47 +35,47 @@
 ```mermaid
 flowchart TB
     subgraph Clients["Clients & Applications"]
-        Browser["🎨 React Web Dashboard (Codity Theme)"]
-        HTTPClient["⚡ REST API Clients / Microservices"]
+        Browser["🎨 React 19 Dashboard (TailwindCSS)"]
+        HTTPClient["⚡ External Microservices (REST API)"]
         WSClient["📡 Real-Time WebSocket Subscribers"]
     end
 
-    subgraph Gateway["API Gateway & Reverse Proxy"]
-        Nginx["Nginx Reverse Proxy (:3000 / :5173)"]
+    subgraph Gateway["Reverse Proxy & Routing"]
+        Nginx["Nginx Proxy (:3000 / :5173 / :80)"]
     end
 
-    subgraph BackendCluster["FastAPI Backend Cluster (:8000)"]
-        API["FastAPI App (REST Endpoints)"]
-        AuthModule["JWT & RBAC Security Engine (Admin/Dev/Viewer)"]
-        TelemetryService["📊 Telemetry & Observability Engine"]
+    subgraph BackendCluster["FastAPI Backend Application (:8000)"]
+        API["FastAPI REST Router"]
+        Auth["JWT & RBAC Security Engine (Admin / Developer / Viewer)"]
         WSManager["WebSocket Connection Manager"]
-        JobIngest["Job Ingestion & Batch Engine"]
+        Telemetry["Observability & Metrics Engine"]
     end
 
-    subgraph Storage["Persistence & Coordination Layer"]
-        Postgres[(PostgreSQL 16 Engine)]
+    subgraph Persistence["PostgreSQL 16 ACID Engine"]
+        Postgres[(PostgreSQL 16)]
         subgraph PGFeatures["ACID Queue Primitives"]
-            SkipLocked["FOR UPDATE SKIP LOCKED CTE"]
+            SkipLocked["FOR UPDATE SKIP LOCKED"]
             PartialIdx["Partial B-Tree Indexes"]
-            AuditLogs["Audit & Execution Logs"]
-            Batches["First-Class Job Batches"]
-            MultiTenancy["Tenant Isolation (Org / Project)"]
+            Fencing["Lease Fencing Tokens"]
+            Batches["Job Batches Coordinator"]
+            Idemp["Idempotency Records"]
         end
     end
 
     subgraph WorkerFleet["Distributed Worker Fleet"]
-        Worker1["⚙️ Worker Node 1 (Daemon)"]
-        Worker2["⚙️ Worker Node 2 (Daemon)"]
-        WorkerN["⚙️ Worker Node N (Daemon)"]
+        Worker1["⚙️ Worker Daemon 1"]
+        Worker2["⚙️ Worker Daemon 2"]
+        WorkerN["⚙️ Worker Daemon N"]
         Runner["Sandboxed Task Runner"]
         RateLimiter["Token-Bucket Rate Limiter"]
-        DAGEngine["DAG Dependency Resolver"]
+        DAG["DAG Dependency Resolver"]
     end
 
-    subgraph SchedulerDaemons["Background Automation Daemons"]
-        Reaper["💀 Zombie Worker & Lease Reaper"]
-        CronDispatcher["⏰ Cron Recurring Dispatcher"]
-        AIDiagnostics["🧠 AI Failure Root Cause Engine"]
+    subgraph Daemons["Background Automation Daemons"]
+        Promoter["🕒 ScheduledJobPromoter (delayed -> queued)"]
+        Reaper["💀 Lease Reaper (dead worker recovery)"]
+        Cron["⏰ Cron Dispatcher (recurring schedules)"]
+        AIDiag["🧠 AI LLM Diagnostic Engine (Gemini / OpenAI)"]
     end
 
     Browser --> Nginx
@@ -83,177 +83,187 @@ flowchart TB
     WSClient --> Nginx
     Nginx --> API
 
-    API --> AuthModule
-    API --> TelemetryService
+    API --> Auth
     API --> WSManager
-    API --> JobIngest
-    JobIngest --> Postgres
+    API --> Telemetry
+    API --> Postgres
 
     WorkerFleet -->|Atomic Poll SKIP LOCKED| Postgres
-    WorkerFleet -->|Heartbeat & Telemetry| Postgres
+    WorkerFleet -->|Heartbeats & Telemetry| Postgres
     WorkerFleet -->|Push Logs & DLQ| Postgres
 
-    Reaper -->|Scan Expired Leases| Postgres
-    CronDispatcher -->|Evaluate Cron & Dispatch| Postgres
-    AIDiagnostics -->|Diagnose Exceptions| Postgres
+    Promoter -->|Promote Due Jobs| Postgres
+    Reaper -->|Reclaim Expired Leases| Postgres
+    Cron -->|Dispatch Idempotent Recurring Jobs| Postgres
+    AIDiag -->|Generate Failure RCA| Postgres
 ```
 
 ---
 
-## ✨ Key Engineering Features
+## 🚀 Quickstart (Docker Compose)
 
-- **🧪 Rigorous Distributed Stress & Race Condition Verification**:
-  - **Test 1 (Mutual Exclusion):** 2 parallel workers competing for 1 job $\to$ exactly 1 claim, 0 duplicate executions.
-  - **Test 2 (High-Throughput Ingestion):** 100 jobs drained across 5 parallel workers $\to$ exactly 100 executions, 0 duplicates, 0 dropped jobs.
-  - **Test 3 (Concurrency Invariant):** 5 parallel workers under heavy queue pressure $\to$ active running jobs **strictly $\le 3$** at all times.
-  - **Test 4 (Worker Crash & Lease Fencing):** Partitioned/crashed worker loses lease $\to$ recovered by Reaper $\to$ claimed by healthy worker $\to$ zombie worker finalization safely fenced and rejected.
-  - **Test 5 (Concurrent Idempotency Burst):** 100 simultaneous async POST requests with the same key $\to$ exactly 1 job created, all 100 return the identical job ID.
-  - **Test 6 (Scheduler High-Availability Race):** 3 concurrent scheduler daemon replicas evaluating due cron jobs $\to$ exactly 1 child job dispatched.
-- **📊 Comprehensive Observability & Telemetry Engine**:
-  - **System Level:** Total jobs, live Throughput (jobs/sec), Success rate %, Failure rate %, Retry rate %, DLQ rate %.
-  - **Queue Level:** Real-time Queue depth, Oldest job waiting age, Average wait time (ms), Running jobs vs Limit, Concurrency utilization gauge bars (0-100%), and Throughput (ops/s).
-  - **Worker Fleet Level:** Online, Busy, and Idle node counters, Heartbeat age tracking (seconds), cumulative processed count, and failure count.
-  - **Job Latency Breakdown:** Queue wait latency (ms), task execution duration (ms), retry attempt counters, and total lifecycle duration.
-- **🔒 Atomic Claiming & Queue Serialization**: Queue row-level locking + `FOR UPDATE SKIP LOCKED` guarantees strict concurrency adherence without double execution.
-- **🛡️ Hierarchical RBAC & Multi-Tenant Isolation**: 3-tier Role-Based Access Control (`Owner/Admin`, `Developer/Member`, `Viewer`) with strict cross-organization cryptographic and tenant barriers.
-- **📦 First-Class Batch Orchestration**: Coordinator model (`job_batches`) tracks child jobs with live visual progress (`75/100 completed, 3 failed`), batch-wide cancellation, and 1-click retry.
-- **🛡️ Lease Fencing Tokens**: Monotonic `lease_token` (UUID) validation on every state transition eliminates split-brain corruption from partitioned or unpaused zombie workers.
-- **⏰ Race-Free Distributed Cron**: Deterministic `cron:<schedule_id>:<scheduled_for>` execution keys prevent duplicate recurring occurrences across multi-scheduler replicas.
-- **🛡️ At-Least-Once Execution & Side-Effect Idempotency**: Stamped `execution_id` and attempt tracking via `ExecutionContext` paired with database-backed `idempotency_records` to safeguard third-party external side-effects across retries.
-- **⚡ Partial B-Tree Indexes**: Sub-millisecond polling lookups even with 10M+ completed jobs.
-- **🔄 Worker Heartbeat Leases & Zombie Reaper**: Recovers orphaned jobs within 10s if a worker crashes.
-- **📈 Exponential Backoff with Full Jitter**: Prevents thundering herds on failing external services.
-- **💀 Dead Letter Queue (DLQ) Incident Center**: Stack trace capture, 1-click single replay & bulk redrive.
-- **⛓️ DAG Workflow Dependencies**: Parent-child chaining with automatic child unblocking on success and cascade cancellation on failure.
-- **🪣 Token-Bucket Rate Limiter**: Enforces strict `rate_limit_rps` per queue.
-- **🧠 AI-Assisted Root Cause Diagnosis**: Analyzes exceptions (OOM, Timeouts, Validation) and recommends fixes.
-- **📡 Real-Time WebSockets**: Live status broadcasts to browser dashboard without client polling.
-- **🔑 Client Idempotency**: `Idempotency-Key` header with `ON CONFLICT DO NOTHING` deduplication.
-
----
-
-## 🚀 Quickstart (1-Command Docker Setup)
-
-### 1. Clone the repository:
+### 1. Clone & Start the Cluster
 ```bash
-git clone https://github.com/your-username/codity-job-scheduler.git
-cd codity-job-scheduler
+git clone https://github.com/rohitmore2020/Job_schedular.git
+cd Job_schedular
+
+# Start all 5 microservices (PostgreSQL, API, Worker, Reaper/Cron, Frontend)
+docker compose up --build -d
 ```
 
-### 2. Start the cluster:
-```bash
-docker-compose up --build
-```
-
-### 3. Open in your browser:
+### 2. Access the Application
 - **🎨 Web Dashboard:** [http://localhost:3000](http://localhost:3000) *(or [http://localhost:5173](http://localhost:5173))*
-  - **Quick 1-Click Demo Login:** Click the instant login button on screen *(or use `admin@distributed-scheduler.io` / `Password123!`)*.
+  - **Quick Demo Login:** Click the 1-click login button on screen *(or use `admin@distributed-scheduler.io` / `Password123!`)*.
 - **📚 Interactive Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **📖 ReDoc API Documentation:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **📖 ReDoc API Reference:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### 3. Scale Worker Nodes Horizontally
+```bash
+# Scale to 5 parallel worker containers (25 total concurrent execution slots)
+docker compose up --scale worker=5 -d
+```
 
 ---
 
 ## 🛠️ Local Development Setup
 
-If you prefer to run services individually on your machine:
-
 ```bash
 # 1. Start PostgreSQL
-docker-compose up -d postgres
+docker compose up -d postgres
 
-# 2. Setup Virtual Environment
+# 2. Setup Python Virtual Environment
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
 
-# 3. Run Migrations & Seed Demo Data
+# 3. Apply Schema Migrations & Seed Demo Data
 alembic upgrade head
 python scripts/seed_demo.py
 
-# 4. Start API Server (Terminal 1)
-uvicorn backend.app.main:app --reload --port 8000
+# 4. Launch Services
+uvicorn backend.app.main:app --reload --port 8000     # Terminal 1: REST API
+python -m worker.main                                 # Terminal 2: Worker Daemon
+python -m worker.scheduler_main                       # Terminal 3: Promoter & Reaper
 
-# 5. Start Worker Node (Terminal 2)
-python -m worker.main
-
-# 6. Start Lease Reaper & Cron Scheduler (Terminal 3)
-python -m worker.scheduler_main
-
-# 7. Start React Frontend (Terminal 4)
-cd frontend
-npm install
-npm run dev
+# 5. Start React Frontend
+cd frontend && npm install && npm run dev             # Terminal 4: Dashboard
 ```
 
 ---
 
-## 🧪 Automated Testing Suite (42/42 Passing)
+## ✨ Core Engineering Capabilities
 
-Run the comprehensive test suite covering atomic concurrency, racing workers, lease expiration, idempotency, DAGs, rate limiting, and WebSockets:
+### 1. ACID Atomic Claiming (`FOR UPDATE SKIP LOCKED`)
+- Workers poll for available queued tasks using a single atomic SQL transaction:
+  ```sql
+  UPDATE jobs
+  SET status = 'running',
+      locked_by_worker_id = :worker_id,
+      lock_expires_at = NOW() + INTERVAL '30 seconds',
+      lease_token = gen_random_uuid(),
+      attempt_count = attempt_count + 1
+  WHERE id = (
+      SELECT id FROM jobs
+      WHERE status = 'queued' AND run_at <= NOW()
+      ORDER BY priority DESC, run_at ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+  )
+  RETURNING *;
+  ```
+- **Zero Lock Contention:** Eliminates lock blocking and race conditions across parallel workers.
+- **Strict Concurrency Enforcement:** Workers respect queue-level concurrency caps (`concurrency_limit`) with zero race condition leakage.
 
+### 2. Worker Leases & Zombie Split-Brain Protection
+- **Heartbeat Renewals:** Active workers emit telemetry heartbeats every 5s, renewing active job leases.
+- **Automated Lease Reaper:** If a worker crashes or becomes partitioned, the `LeaseReaper` reclaims orphaned jobs whose `lock_expires_at` has elapsed.
+- **Fencing Tokens:** Every claim increments a monotonic UUID `lease_token`. When a zombie worker attempts to finalize a job after its lease was reclaimed, the completion is **safely rejected and fenced**, preserving state integrity.
+
+### 3. Dedicated Delayed Job Promotion (`ScheduledJobPromoter`)
+- A dedicated background promoter scans for scheduled jobs whose `run_at` timestamp has arrived, transitioning them atomically from `scheduled` to `queued` using `UPDATE ... WHERE id IN (...) FOR UPDATE SKIP LOCKED`.
+
+### 4. Mathematical Retry Backoff Matrix & DLQ
+- Supports **Fixed**, **Linear**, and **Exponential** backoff with full jitter randomization:
+  $$\text{Delay}_{\text{Exponential}} = \min\left(\text{max\_interval}, \text{initial\_interval} \times 2^{\text{attempt}-1}\right)$$
+- **Dead Letter Queue (DLQ):** Exhausted jobs escalate to the DLQ with captured stack traces and 1-click replay / bulk redrive.
+
+### 5. AI-Assisted Root Cause Failure Diagnostics
+- Integrates with **Google Gemini** (`gemini-1.5-flash`) and **OpenAI** (`gpt-4o-mini`) APIs to analyze task exception traces and payloads, returning root-cause explanations and remediation recommendations with an automatic zero-key offline heuristic fallback.
+
+### 6. Real-Time WebSocket Streaming
+- Global `ws_manager` broadcasts live structured events across connected clients on job state changes (`job_created`, `job_running`, `job_completed`, `job_retrying`, `job_dead_letter`), queue pause/resume, and worker telemetry pulses.
+
+### 7. First-Class Batch & DAG Orchestration
+- **Batch Coordinator (`job_batches`):** Tracks bulk tasks with live aggregated progress percentages and batch-wide cancellation/retry.
+- **DAG Dependencies:** Parent-child dependency chains with automatic child unblocking on success and cascade cancellation on parent DLQ failure.
+
+---
+
+## 📊 Baseline Performance Benchmarks
+
+Extracted from real execution benchmarks running against PostgreSQL 16 ([`docs/test-results.md`](docs/test-results.md)):
+
+| Workload | Workers | Throughput | Avg Latency | P95 Latency | Failures | Duplicate Executions |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **100 Jobs** | 1 Worker | **137.4 jobs/s** | 7.28 ms | 13.91 ms | **0** | **0** |
+| **100 Jobs** | 5 Workers | **483.1 jobs/s** | 2.07 ms | 3.92 ms | **0** | **0** |
+| **500 Jobs** | 5 Workers | **518.7 jobs/s** | 1.93 ms | 3.71 ms | **0** | **0** |
+| **1000 Jobs** | 10 Workers | **684.2 jobs/s** | 1.46 ms | 2.89 ms | **0** | **0** |
+
+---
+
+## 🧪 Comprehensive Test Suite
+
+### 1. Backend Integration & Stress Suite (`pytest`)
 ```bash
 .venv/bin/pytest tests/ -v
 ```
-
-### Output:
 ```
-tests/test_day1_setup.py::test_database_connection PASSED                [  2%]
-tests/test_day1_setup.py::test_health_check_endpoint PASSED              [  5%]
-tests/test_day1_setup.py::test_root_endpoint PASSED                      [  7%]
-tests/test_day2_models.py::test_org_project_user_hierarchy PASSED        [  9%]
-tests/test_day2_models.py::test_queue_and_retry_policy PASSED            [ 12%]
-tests/test_day2_models.py::test_job_idempotency_constraint PASSED        [ 14%]
-tests/test_day2_models.py::test_job_lifecycle_and_executions PASSED      [ 17%]
-tests/test_day2_models.py::test_worker_and_heartbeats PASSED             [ 19%]
-tests/test_day4_auth.py::test_signup_success PASSED                      [ 21%]
-tests/test_day4_auth.py::test_signup_duplicate_email PASSED              [ 24%]
-tests/test_day4_auth.py::test_login_success_and_invalid_password PASSED  [ 26%]
-tests/test_day4_auth.py::test_get_me_authenticated_and_unauthorized PASSED [ 29%]
-tests/test_day4_auth.py::test_refresh_token_flow PASSED                  [ 31%]
-tests/test_day5_projects_queues.py::test_project_crud_and_multi_tenant_isolation PASSED [ 33%]
-tests/test_day5_projects_queues.py::test_project_api_key_generation PASSED [ 36%]
-tests/test_day5_projects_queues.py::test_queue_lifecycle_and_pause_resume PASSED [ 38%]
-tests/test_day6_jobs.py::test_job_immediate_creation PASSED              [ 40%]
-tests/test_day6_jobs.py::test_job_delayed_creation PASSED                [ 43%]
-tests/test_day6_jobs.py::test_job_idempotency_deduplication PASSED       [ 45%]
-tests/test_day6_jobs.py::test_batch_job_submission PASSED                [ 48%]
-tests/test_day6_jobs.py::test_job_filtering_and_pagination PASSED        [ 50%]
-tests/test_day6_jobs.py::test_job_cancel_and_retry PASSED                [ 52%]
-tests/test_day7_worker_concurrency.py::test_single_worker_claim_and_execute PASSED [ 55%]
-tests/test_day7_worker_concurrency.py::test_concurrent_worker_racing_no_duplicates PASSED [ 57%]
-tests/test_day7_worker_concurrency.py::test_worker_skips_paused_queue PASSED [ 60%]
-tests/test_day7_worker_concurrency.py::test_worker_respects_queue_concurrency_limit PASSED [ 62%]
-tests/test_day7_worker_concurrency.py::test_failing_task_captures_traceback_and_dlq PASSED [ 64%]
-tests/test_day8_heartbeat_reaper.py::test_heartbeat_emitter_telemetry PASSED [ 67%]
-tests/test_day8_heartbeat_reaper.py::test_zombie_worker_and_lease_reaper_recovery PASSED [ 69%]
-tests/test_day8_heartbeat_reaper.py::test_reaper_escalates_to_dlq_when_retries_exhausted PASSED [ 71%]
-tests/test_day8_heartbeat_reaper.py::test_worker_rest_api_endpoints PASSED [ 74%]
-tests/test_day9_retry_dlq.py::test_backoff_calculator_algorithms PASSED  [ 76%]
-tests/test_day9_retry_dlq.py::test_retry_backoff_execution_schedule PASSED [ 79%]
-tests/test_day9_retry_dlq.py::test_dlq_escalation_and_replay_endpoint PASSED [ 81%]
-tests/test_day10_cron_ws.py::test_cron_expression_calculation PASSED     [ 83%]
-tests/test_day10_cron_ws.py::test_cron_dispatcher_evaluates_and_enqueues_child_job PASSED [ 86%]
-tests/test_day10_cron_ws.py::test_schedules_crud_and_pause_resume PASSED [ 88%]
-tests/test_day10_cron_ws.py::test_websocket_endpoint PASSED              [ 90%]
-tests/test_day13_bonus_features.py::test_dag_workflow_dependency_success_chain PASSED [ 93%]
-tests/test_day13_bonus_features.py::test_dag_workflow_cascade_cancellation_on_dlq PASSED [ 95%]
-tests/test_day13_bonus_features.py::test_token_bucket_rate_limiter PASSED [ 98%]
-tests/test_day13_bonus_features.py::test_ai_failure_diagnostic_engine PASSED [100%]
-
-======================== 42 passed, 1 warning in 15.14s ========================
+======================= 101 passed, 1 warning in 35.65s ========================
 ```
+
+| Test File | Scenarios Tested | Passed | Status |
+| :--- | :--- | :---: | :---: |
+| `tests/test_atomic_claiming.py` | 100 jobs on 5 workers (100 unique, 0 duplicate executions) | 2/2 | ✅ PASSED |
+| `tests/test_day17_delayed_promoter.py` | Delayed job lifecycle, batch promoter, HA race safety | 4/4 | ✅ PASSED |
+| `tests/test_worker_leases_and_recovery.py` | Lease renewal lifecycle & dead worker reaper requeue | 2/2 | ✅ PASSED |
+| `tests/test_zombie_worker_fencing.py` | Zombie worker split-brain fencing and rejection | 1/1 | ✅ PASSED |
+| `tests/test_graceful_shutdown.py` | Worker SIGTERM handling $\to$ stop polling $\to$ drain $\to$ exit | 1/1 | ✅ PASSED |
+| `tests/test_retry_matrix.py` | Fixed, Linear, Exponential backoff matrix & jitter bounds | 13/13 | ✅ PASSED |
+| `tests/test_ai_llm_diagnostics.py` | Gemini & OpenAI LLM diagnostics with offline fallback | 4/4 | ✅ PASSED |
+| `tests/test_websocket_realtime_broadcast.py` | Real-time WebSocket broadcasting across tabs & heartbeats | 4/4 | ✅ PASSED |
+| `tests/test_docker_compose_and_images.py` | Docker compose schema, container healthchecks & Nginx | 5/5 | ✅ PASSED |
+| `tests/test_distributed_stress_and_races.py` | Concurrency limits, multi-node HA scheduler races | 6/6 | ✅ PASSED |
+| `tests/test_day13_bonus_features.py` | DAG cascades, Token-Bucket rate limiting, Idempotency | 5/5 | ✅ PASSED |
+| `tests/test_day14_batch_jobs.py` | Batch endpoints, child job aggregation, batch cancel | 4/4 | ✅ PASSED |
+| `tests/test_day15_rbac_and_isolation.py` | Multi-tier RBAC (`Admin`, `Developer`, `Viewer`) | 4/4 | ✅ PASSED |
+| `tests/test_day16_telemetry_observability.py` | System KPIs, queue wait times, worker telemetry | 4/4 | ✅ PASSED |
+| *Core Setup & API Suites* | Auth, Projects, Queues, Jobs CRUD, Cron dispatching | 42/42 | ✅ PASSED |
+| **Total Backend Tests** | **Full Integration & Concurrency Test Suite** | **101/101** | **✅ PASSED** |
+
+### 2. Frontend UI Runtime Test Suite (`vitest`)
+```bash
+cd frontend && npm test
+```
+```
+Test Files  10 passed (10)
+Tests       17 passed (17)
+```
+- **Optimized Bundle Splitting:** Initial app bundle reduced to **`17.52 kB`** (down from 719 kB) with zero oversized chunk warnings.
+- **Component Tests:** Interactive verification across `Sidebar`, `Header`, `OverviewView`, `QueuesView`, `JobsView`, `DLQView`, `WorkersView`, `BatchesView`, `SchedulesView`, and `SubmitJobModal`.
 
 ---
 
 ## 📖 In-Depth Engineering Documentation
 
-- 📐 **[docs/architecture.md](docs/architecture.md)** — High-Level Subsystems, Sequence Diagrams & Failure Scenarios.
-- 🗄️ **[docs/erd.md](docs/erd.md)** — Entity Relationship Diagram, Normalized Schema & Partial Indexes.
-- ⚖️ **[docs/design-decisions.md](docs/design-decisions.md)** — Architectural Trade-Offs (PostgreSQL `SKIP LOCKED` vs. Redis/RabbitMQ/Kafka).
-- 📅 **[planner.md](planner.md)** — Engineering Roadmap and Deliverables Checklist.
+- 📐 **[docs/architecture.md](docs/architecture.md)** — Subsystems, Sequence Diagrams & State Transitions.
+- 🗄️ **[docs/erd.md](docs/erd.md)** — Entity Relationship Diagram & Partial Indexing Strategy.
+- ⚖️ **[docs/design-decisions.md](docs/design-decisions.md)** — Architectural Trade-Offs (PostgreSQL `SKIP LOCKED` vs. Redis/RabbitMQ, Atomic Direct Transitions, Graceful Draining).
+- 🧪 **[docs/test-results.md](docs/test-results.md)** — Full Test Execution Log & Baseline Performance Benchmarks.
+- 📅 **[planner.md](planner.md)** — Engineering Deliverables Roadmap & Verification Checkpoints.
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` for details.
