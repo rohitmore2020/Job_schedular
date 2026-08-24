@@ -6,66 +6,91 @@ The **Codity Distributed Job Scheduler** is a production-grade, multi-tenant dis
 
 ```mermaid
 flowchart TB
-    subgraph Clients["Clients & Applications"]
-        Browser["🎨 React Web Dashboard (Codity Theme)"]
-        HTTPClient["⚡ REST API Clients / Microservices"]
-        WSClient["📡 Real-Time WebSocket Subscribers"]
+    %% ================= GLOBAL STYLING =================
+    classDef clientStyle fill:#0B132B,stroke:#00E5FF,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef gatewayStyle fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef apiStyle fill:#1E1B4B,stroke:#818CF8,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef pgStyle fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef workerStyle fill:#312E81,stroke:#C084FC,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef daemonStyle fill:#4C0519,stroke:#FB7185,stroke-width:2px,color:#E2E8F0,font-weight:bold;
+    classDef featureStyle fill:#022C22,stroke:#34D399,stroke-width:1px,color:#A7F3D0;
+
+    %% ================= TIER 1: CLIENTS =================
+    subgraph TIER1["🎨 1. CLIENT & CONSUMER LAYER"]
+        Browser["💻 React 19 Dashboard<br/><i>(Live Telemetry & Controls)</i>"]:::clientStyle
+        Microservices["⚡ External Microservices<br/><i>(REST Ingestion)</i>"]:::clientStyle
+        WSSubscribers["📡 WebSocket Subscribers<br/><i>(Live Event Feed)</i>"]:::clientStyle
     end
 
-    subgraph Gateway["API Gateway & Reverse Proxy"]
-        Nginx["Nginx Reverse Proxy (:3000 / :5173)"]
+    %% ================= TIER 2: GATEWAY =================
+    subgraph TIER2["🌐 2. INGRESS & REVERSE PROXY LAYER"]
+        Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 & WebSocket Upgrade Passthrough</i>"]:::gatewayStyle
     end
 
-    subgraph BackendCluster["FastAPI Backend Cluster (:8000)"]
-        API["FastAPI App (REST Endpoints)"]
-        AuthModule["JWT & RBAC Security Engine"]
-        WSManager["WebSocket Connection Manager"]
-        JobIngest["Job Ingestion & Batch Engine"]
+    %% ================= TIER 3: CONTROL PLANE =================
+    subgraph TIER3["⚡ 3. API CONTROL PLANE (FastAPI Cluster :8000)"]
+        API["🚀 FastAPI Async REST Router"]:::apiStyle
+        AuthModule["🔒 JWT & RBAC Engine<br/><i>(Admin / Dev / Viewer)</i>"]:::apiStyle
+        WSManager["📡 WebSocket Broadcast Hub"]:::apiStyle
+        Telemetry["📊 Telemetry & KPI Engine"]:::apiStyle
     end
 
-    subgraph Storage["Persistence & Coordination Layer"]
-        Postgres[(PostgreSQL 16 Engine)]
-        subgraph PGFeatures["ACID Queue Primitives"]
-            SkipLocked["FOR UPDATE SKIP LOCKED CTE"]
-            PartialIdx["Partial B-Tree Indexes"]
-            AuditLogs["Audit & Execution Logs"]
+    %% ================= TIER 4: PERSISTENCE LAYER =================
+    subgraph TIER4["🗄️ 4. ACID PERSISTENCE & COORDINATION CORE (PostgreSQL 16)"]
+        Postgres[("🐘 PostgreSQL 16 ACID Engine")]:::pgStyle
+        subgraph PGFeatures["Transactional Primitives & Structures"]
+            SkipLocked["⚡ FOR UPDATE SKIP LOCKED<br/><i>(Zero-Collision Atomic Claiming)</i>"]:::featureStyle
+            Fencing["🛡️ Monotonic Lease Fencing<br/><i>(Zombie Protection)</i>"]:::featureStyle
+            Batches["📦 Batch Coordinator<br/><i>(Live Progress Aggregation)</i>"]:::featureStyle
+            PartialIdx["⚡ Partial B-Tree Indexes<br/><i>(Sub-ms Status Lookups)</i>"]:::featureStyle
+            Idemp["🔑 Idempotency Store<br/><i>(Deduplication Records)</i>"]:::featureStyle
         end
     end
 
-    subgraph WorkerFleet["Distributed Worker Fleet"]
-        Worker1["⚙️ Worker Node 1 (Daemon)"]
-        Worker2["⚙️ Worker Node 2 (Daemon)"]
-        WorkerN["⚙️ Worker Node N (Daemon)"]
-        Runner["Sandboxed Task Runner"]
-        RateLimiter["Token-Bucket Rate Limiter"]
-        DAGEngine["DAG Dependency Resolver"]
+    %% ================= TIER 5: WORKER FLEET =================
+    subgraph TIER5["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Node Fleet)"]
+        Worker1["Node 1 Daemon"]:::workerStyle
+        Worker2["Node 2 Daemon"]:::workerStyle
+        WorkerN["Node N Daemon"]:::workerStyle
+        
+        Runner["📦 Sandboxed Task Runner"]:::workerStyle
+        RateLimiter["🪣 Token-Bucket Rate Limiter"]:::workerStyle
+        DAG["⛓️ DAG Dependency Cascade"]:::workerStyle
     end
 
-    subgraph SchedulerDaemons["Background Automation Daemons"]
-        Reaper["💀 Zombie Worker & Lease Reaper"]
-        CronDispatcher["⏰ Cron Recurring Dispatcher"]
-        Promoter["⚡ Scheduled Job Promoter (scheduled -> queued)"]
-        AIDiagnostics["🧠 AI Failure Root Cause Engine"]
+    %% ================= TIER 6: BACKGROUND DAEMONS =================
+    subgraph TIER6["🤖 6. AUTONOMOUS BACKGROUND DAEMONS"]
+        Promoter["🕒 ScheduledJobPromoter<br/><i>(Atomic delayed ➔ queued promotion)</i>"]:::daemonStyle
+        Reaper["💀 Lease Reaper<br/><i>(Dead worker recovery & requeue)</i>"]:::daemonStyle
+        CronDispatcher["⏰ Cron Dispatcher<br/><i>(Deterministic 5-part cron evaluator)</i>"]:::daemonStyle
+        AIDiagnostics["🧠 AI Diagnostics<br/><i>(Google Gemini / OpenAI LLM RCA)</i>"]:::daemonStyle
     end
 
-    Browser --> Nginx
-    HTTPClient --> Nginx
-    WSClient --> Nginx
-    Nginx --> API
+    %% ================= DATA FLOW CONNECTIONS =================
+    Browser -->|HTTP / JSON| Nginx
+    Microservices -->|REST API Requests| Nginx
+    WSSubscribers <-->|WSS: Connection Upgrade| Nginx
+
+    Nginx -->|Route /api/| API
+    Nginx <-->|Route /api/v1/ws| WSManager
 
     API --> AuthModule
     API --> WSManager
-    API --> JobIngest
-    JobIngest --> Postgres
+    API --> Telemetry
+    API -->|asyncpg Connection Pool| Postgres
 
-    WorkerFleet -->|Atomic Poll SKIP LOCKED| Postgres
-    WorkerFleet -->|Heartbeat & Telemetry| Postgres
-    WorkerFleet -->|Push Logs & DLQ| Postgres
+    Worker1 & Worker2 & WorkerN -->|1. Atomic Poll FOR UPDATE SKIP LOCKED| Postgres
+    Worker1 & Worker2 & WorkerN -->|2. Heartbeat Telemetry & Lease Renewal| Postgres
+    Worker1 & Worker2 & WorkerN -->|3. Record Executions, Logs & DLQ| Postgres
 
-    Reaper -->|Scan Expired Leases| Postgres
-    CronDispatcher -->|Evaluate Cron & Dispatch| Postgres
-    Promoter -->|Promote Due Scheduled Jobs SKIP LOCKED| Postgres
-    AIDiagnostics -->|Diagnose Exceptions| Postgres
+    Runner --- Worker1 & Worker2 & WorkerN
+    RateLimiter --- Runner
+    DAG --- Runner
+
+    Promoter -->|Promote Due Scheduled Tasks| Postgres
+    Reaper -->|Scan Expired Leases & Reclaim| Postgres
+    CronDispatcher -->|Dispatch Idempotent Recurring Jobs| Postgres
+    AIDiagnostics -->|Analyze Stack Traces on DLQ| Postgres
 ```
 
 ---
