@@ -180,7 +180,7 @@ class TaskRunner:
                         Job.status == JobStatus.RUNNING,
                     )
                     .values(
-                        status=JobStatus.QUEUED,
+                        status=JobStatus.SCHEDULED if backoff_seconds > 0 else JobStatus.QUEUED,
                         run_at=end_wall_time + timedelta(seconds=backoff_seconds),
                         locked_by_worker_id=None,
                         lock_expires_at=None,

@@ -119,7 +119,7 @@ async def test_retry_backoff_execution_schedule(db_session, retry_queue_fixture)
     assert execution.status == ExecutionStatus.FAILED
 
     await db_session.refresh(claimed)
-    assert claimed.status == JobStatus.QUEUED
+    assert claimed.status in (JobStatus.QUEUED, JobStatus.SCHEDULED)
     assert claimed.attempt_count == 1
     # run_at should be pushed into future by fixed 3s
     assert claimed.run_at >= now_before + timedelta(seconds=2)
