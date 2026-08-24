@@ -9,14 +9,14 @@
 ## 0.2 Automated Test & Coverage Results
 
 ### 📊 Summary
-- **Total tests:** 96
-- **Passed:** 96
+- **Total tests:** 101
+- **Passed:** 101
 - **Failed:** 0
 - **Skipped:** 0
-- **Coverage:** 73%
+- **Coverage:** 74%
 
 ```
-======================== 96 passed, 1 warning in 37.25s ========================
+======================= 101 passed, 1 warning in 35.65s ========================
 ```
 
 ### 📋 Test Suite Breakdown
@@ -40,6 +40,7 @@
 | `tests/test_day16_telemetry_observability.py` | System KPI rates, queue depth & wait time metrics, fleet heartbeat age, per-job latency breakdowns | 4/4 | ✅ PASSED |
 | `tests/test_day17_delayed_promoter.py` | Delayed job execution lifecycle, batch promotion, multi-promoter HA race protection, scheduled job concurrency race | 4/4 | ✅ PASSED |
 | `tests/test_distributed_stress_and_races.py` | Mutual exclusion (2 workers/1 job), 100 jobs/5 workers drain, concurrency limit invariant ($\le 3$), worker crash recovery & fencing, 100-burst idempotency, 3-node HA scheduler race | 6/6 | ✅ PASSED |
+| `tests/test_docker_compose_and_images.py` | Docker compose schema, PostgreSQL healthchecks, API/Worker/Scheduler Dockerfile structures, Nginx reverse proxy & WebSocket upgrade | 5/5 | ✅ PASSED |
 | `tests/test_graceful_shutdown.py` | Worker SIGTERM handling $\to$ stop polling $\to$ finish active tasks $\to$ heartbeat = DRAINING $\to$ clean exit (DEAD) | 1/1 | ✅ PASSED |
 | `tests/test_retry_matrix.py` | Mathematical matrix evaluation (Fixed, Linear, Exponential), max delay capping, jitter randomization, DLQ escalation | 13/13 | ✅ PASSED |
 | `tests/test_websocket_realtime_broadcast.py` | WebSocket live events (job creation, execution start/complete, cancel/retry, multi-tab broadcast fanout, worker heartbeats) | 4/4 | ✅ PASSED |
