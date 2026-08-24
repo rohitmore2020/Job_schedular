@@ -5,101 +5,61 @@
 The **Codity Distributed Job Scheduler** is a production-grade, multi-tenant distributed task execution platform designed for high-throughput, low-latency background job processing with ACID reliability guarantees.
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'Inter, sans-serif' }}}%%
 flowchart TB
     %% ================= THEME CLASS DEFINITIONS =================
-    classDef default fill:#0D172A,stroke:#38BDF8,stroke-width:1.5px,color:#F1F5F9,font-family:Inter,sans-serif;
-    classDef client fill:#0B132B,stroke:#00E5FF,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef gateway fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef api fill:#131B36,stroke:#818CF8,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef postgres fill:#062C24,stroke:#10B981,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef worker fill:#1E1B4B,stroke:#C084FC,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef daemon fill:#2D0612,stroke:#FB7185,stroke-width:2px,color:#FFFFFF,font-weight:600;
-    classDef feature fill:#081E19,stroke:#34D399,stroke-width:1px,color:#A7F3D0;
-    classDef dbCore fill:#033A2D,stroke:#059669,stroke-width:3px,color:#6EE7B7,font-weight:700;
+    classDef client fill:#0B132B,stroke:#00E5FF,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
+    classDef gateway fill:#0F172A,stroke:#38BDF8,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
+    classDef api fill:#131B36,stroke:#818CF8,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
+    classDef postgres fill:#033A2D,stroke:#10B981,stroke-width:3px,color:#FFFFFF,font-size:16px,font-weight:800;
+    classDef worker fill:#1E1B4B,stroke:#C084FC,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
+    classDef daemon fill:#2D0612,stroke:#FB7185,stroke-width:2.5px,color:#FFFFFF,font-size:15px,font-weight:700;
 
-    %% ================= TIER 1: CLIENTS =================
-    subgraph TIER1["🎨 1. CLIENT & CONSUMER TIER"]
-        Browser["💻 React 19 Web Dashboard<br/><i>(Live Telemetry, Charts & Controls)</i>"]:::client
-        Microservices["⚡ External Microservices<br/><i>(High-Throughput REST Ingest)</i>"]:::client
-        WSSubscribers["📡 WebSocket Subscribers<br/><i>(Real-Time Broadcast Stream)</i>"]:::client
+    subgraph CLIENTS["🎨 1. CLIENT & CONSUMER TIER"]
+        Browser["💻 React 19 Web Dashboard"]:::client
+        Microservices["⚡ External Microservices"]:::client
+        WSSubscribers["📡 Real-Time WebSocket Clients"]:::client
     end
-    style TIER1 fill:#080E1A,stroke:#00E5FF,stroke-width:1px,stroke-dasharray: 4 4,color:#00E5FF
+    style CLIENTS fill:#080E1A,stroke:#00E5FF,stroke-width:1.5px,stroke-dasharray: 4 4,color:#00E5FF,font-size:16px,font-weight:700
 
-    %% ================= TIER 2: GATEWAY =================
-    subgraph TIER2["🌐 2. INGRESS & REVERSE PROXY TIER"]
+    subgraph GATEWAY["🌐 2. INGRESS & REVERSE PROXY TIER"]
         Nginx["🛡️ Nginx Reverse Proxy (:3000 / :5173 / :80)<br/><i>HTTP/1.1 REST & WSS Upgrade Passthrough</i>"]:::gateway
     end
-    style TIER2 fill:#080E1A,stroke:#38BDF8,stroke-width:1px,stroke-dasharray: 4 4,color:#38BDF8
+    style GATEWAY fill:#080E1A,stroke:#38BDF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#38BDF8,font-size:16px,font-weight:700
 
-    %% ================= TIER 3: CONTROL PLANE =================
-    subgraph TIER3["⚡ 3. CONTROL PLANE (FastAPI Cluster :8000)"]
-        API["🚀 FastAPI Async REST Router"]:::api
-        AuthModule["🔒 JWT & RBAC Engine<br/><i>(Admin / Developer / Viewer)</i>"]:::api
+    subgraph BACKEND["⚡ 3. CONTROL PLANE (FastAPI Cluster :8000)"]
+        API["🚀 FastAPI REST Router & Job Ingest"]:::api
+        AuthModule["🔒 JWT & RBAC Security Engine"]:::api
         WSManager["📡 WebSocket Broadcast Hub"]:::api
         Telemetry["📊 Telemetry & Observability Engine"]:::api
     end
-    style TIER3 fill:#080E1A,stroke:#818CF8,stroke-width:1px,stroke-dasharray: 4 4,color:#818CF8
+    style BACKEND fill:#080E1A,stroke:#818CF8,stroke-width:1.5px,stroke-dasharray: 4 4,color:#818CF8,font-size:16px,font-weight:700
 
-    %% ================= TIER 4: PERSISTENCE LAYER =================
-    subgraph TIER4["🗄️ 4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
-        Postgres[("🐘 PostgreSQL 16 ACID Engine")]:::dbCore
-        subgraph PGFeatures["Transactional Primitives & Storage Structures"]
-            SkipLocked["⚡ FOR UPDATE SKIP LOCKED<br/><i>(Atomic Zero-Collision Claiming)</i>"]:::feature
-            Fencing["🛡️ Monotonic Lease Fencing<br/><i>(Split-Brain Zombie Protection)</i>"]:::feature
-            Batches["📦 Batch Coordinator<br/><i>(Aggregated Live Progress)</i>"]:::feature
-            PartialIdx["⚡ Partial B-Tree Indexes<br/><i>(Sub-millisecond Polling)</i>"]:::feature
-            Idemp["🔑 Idempotency Store<br/><i>(At-Least-Once Deduplication)</i>"]:::feature
-        end
+    subgraph STORAGE["🗄️ 4. ACID PERSISTENCE CORE (PostgreSQL 16 Engine)"]
+        Postgres[("🐘 PostgreSQL 16 ACID Engine<br/>• FOR UPDATE SKIP LOCKED (Atomic Claiming)<br/>• Monotonic Lease Fencing Tokens<br/>• Job Batches & Partial B-Tree Indexes")]:::postgres
     end
-    style TIER4 fill:#080E1A,stroke:#10B981,stroke-width:1px,stroke-dasharray: 4 4,color:#10B981
-    style PGFeatures fill:#061D17,stroke:#059669,stroke-width:1px,color:#34D399
+    style STORAGE fill:#080E1A,stroke:#10B981,stroke-width:1.5px,stroke-dasharray: 4 4,color:#10B981,font-size:16px,font-weight:700
 
-    %% ================= TIER 5: WORKER FLEET =================
-    subgraph TIER5["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
-        Worker1["Node 1 Daemon"]:::worker
-        Worker2["Node 2 Daemon"]:::worker
-        WorkerN["Node N Daemon"]:::worker
-        
-        Runner["📦 Sandboxed Task Runner"]:::worker
-        RateLimiter["🪣 Token-Bucket Rate Limiter"]:::worker
-        DAG["⛓️ DAG Dependency Resolver"]:::worker
+    subgraph WORKERS["⚙️ 5. DISTRIBUTED DATA PLANE (Worker Fleet)"]
+        WorkerFleet["⚙️ Distributed Worker Nodes (Daemons)<br/>• Sandboxed Task Execution Runner<br/>• Token-Bucket Rate Limiter & Concurrency Guard<br/>• DAG Workflow Dependency Cascade Resolver"]:::worker
     end
-    style TIER5 fill:#080E1A,stroke:#C084FC,stroke-width:1px,stroke-dasharray: 4 4,color:#C084FC
+    style WORKERS fill:#080E1A,stroke:#C084FC,stroke-width:1.5px,stroke-dasharray: 4 4,color:#C084FC,font-size:16px,font-weight:700
 
-    %% ================= TIER 6: BACKGROUND DAEMONS =================
-    subgraph TIER6["🤖 6. AUTONOMOUS AUTOMATION DAEMONS"]
-        Promoter["🕒 ScheduledJobPromoter<br/><i>(Atomic delayed ➔ queued promotion)</i>"]:::daemon
-        Reaper["💀 Lease Reaper<br/><i>(Dead worker recovery & requeue)</i>"]:::daemon
-        CronDispatcher["⏰ Cron Dispatcher<br/><i>(Deterministic 5-part cron evaluator)</i>"]:::daemon
-        AIDiagnostics["🧠 AI Diagnostics<br/><i>(Google Gemini / OpenAI LLM RCA)</i>"]:::daemon
+    subgraph DAEMONS["🤖 6. AUTONOMOUS BACKGROUND AUTOMATION"]
+        Promoter["🕒 ScheduledJobPromoter (delayed ➔ queued)"]:::daemon
+        Reaper["💀 Lease Reaper (dead worker recovery)"]:::daemon
+        CronDispatcher["⏰ Cron Dispatcher (recurring schedules)"]:::daemon
+        AIDiagnostics["🧠 AI Diagnostics (Gemini / OpenAI LLM)"]:::daemon
     end
-    style TIER6 fill:#080E1A,stroke:#FB7185,stroke-width:1px,stroke-dasharray: 4 4,color:#FB7185
+    style DAEMONS fill:#080E1A,stroke:#FB7185,stroke-width:1.5px,stroke-dasharray: 4 4,color:#FB7185,font-size:16px,font-weight:700
 
-    %% ================= DATA FLOW CONNECTIONS =================
-    Browser -->|HTTP / JSON| Nginx
-    Microservices -->|REST Ingestion| Nginx
-    WSSubscribers <-->|WSS: Live Stream| Nginx
-
-    Nginx -->|Route /api/| API
-    Nginx <-->|Route /api/v1/ws| WSManager
-
-    API --> AuthModule
-    API --> WSManager
-    API --> Telemetry
-    API -->|asyncpg Connection Pool| Postgres
-
-    Worker1 & Worker2 & WorkerN -->|1. Atomic Poll FOR UPDATE SKIP LOCKED| Postgres
-    Worker1 & Worker2 & WorkerN -->|2. Heartbeat Telemetry & Lease Renewal| Postgres
-    Worker1 & Worker2 & WorkerN -->|3. Execution Logs & DLQ Escalation| Postgres
-
-    Runner --- Worker1 & Worker2 & WorkerN
-    RateLimiter --- Runner
-    DAG --- Runner
-
-    Promoter -->|Promote Due Scheduled Tasks| Postgres
-    Reaper -->|Scan Expired Leases & Reclaim| Postgres
-    CronDispatcher -->|Dispatch Idempotent Recurring Jobs| Postgres
-    AIDiagnostics -->|Generate Failure RCA| Postgres
+    CLIENTS -->|HTTP & WebSocket Requests| GATEWAY
+    GATEWAY -->|Forward Traffic| BACKEND
+    BACKEND -->|asyncpg Connection Pool| Postgres
+    WORKERS -->|1. Atomic Poll FOR UPDATE SKIP LOCKED| Postgres
+    WORKERS -->|2. Heartbeats & Telemetry Renewal| Postgres
+    WORKERS -->|3. Record Execution Logs & DLQ| Postgres
+    DAEMONS -->|Promote / Reclaim / Dispatch / Analyze| Postgres
 ```
 
 ---
